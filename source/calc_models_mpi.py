@@ -174,9 +174,25 @@ else:
             if not 'P_k_max_h/Mpc' in params.keys():
                 params['P_k_max_h/Mpc'] = 1.
 
-        params.update(param.extra_input)
+        params.update(param.extra_input) # should include necessary perturbation parameters
         for i, par_name in enumerate(param_names):
-            params[par_name] = model[i]
+            if par_name.startswith("q_"):
+                continue
+            else:
+                params[par_name] = model[i]
+        
+        try:
+            if param.extra_input["xe_pert_type"]=="control":
+                model_cps = [0.0]
+                for i, par_name in enumerate(param_names):
+                    if par_name.startswith("q_"):
+                        model_cps.append(model[i])
+                model_cps.append(0.0) # first and last control points fixed to zero 
+                string_cps = ["{:.4f}".format(c) for c in model_cps] #four decimal places
+                cp_string = ",".join(string_cps)
+                params["xe_control_points"] = cp_string
+        except KeyError:
+            continue
 
         try:
             cosmo = Class()

@@ -154,6 +154,7 @@ for par,interval in param.parameters.items():
         info['params'][par]['proposal'] = proposal
         info['params'][par]['latex'] = par
 
+
 for par in param.output_derived:
     if par == 'A_s' and 'ln10^{10}A_s' in param.parameters:
         info['params']['A'] = {}

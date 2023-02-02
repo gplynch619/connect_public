@@ -31,10 +31,7 @@ elif sampling == 'lhc':
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 N_slaves = comm.Get_size()-1
-
 get_slave = itertools.cycle(range(1,N_slaves+1))
-
-
 
 ## rank == 0 (master)
 if rank == 0:

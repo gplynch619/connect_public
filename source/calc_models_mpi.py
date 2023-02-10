@@ -3,6 +3,8 @@ from classy import Class
 from scipy.stats import qmc
 import pickle as pkl
 import sys
+import psutil
+import datetime
 import os
 from default_module import Parameters
 from tools import get_computed_cls

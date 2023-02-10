@@ -1,12 +1,13 @@
 from cobaya.run import run
 from cobaya.log import LoggedError
 from source.default_module import Parameters
-from pathlib import Path
 from mpi4py import MPI
 import numpy as np
-import sys
 import os
 import pickle as pkl
+from pathlib import Path
+import sys
+
 
 model = sys.argv[1]
 iteration = sys.argv[2]
@@ -29,8 +30,6 @@ rank = comm.Get_rank()
 
 sys.stdout = open(directory + 'cobaya.log','a+')
 sys.stderr = sys.stdout
-
-
 
 lkls = {'Planck_highl_TTTEEE_lite': {'name': 'planck_2018_highl_plik.TTTEEE_lite',
                                      'clik': os.path.join(path_clik, 'hi_l/plik_lite'),
@@ -167,9 +166,6 @@ for par in param.output_derived:
         info['params'][par] = {}
         info['params'][par]['latex'] = par
 
-
-
-
 updated_info, sampler = run(info)
 
 list_of_chains = comm.gather(sampler.products()["sample"].to_numpy(), root=0)
@@ -184,3 +180,5 @@ if rank == 0:
     with open(directory + 'cobaya_all_chains.pkl','wb') as f:
         pkl.dump(all_chains,f)
 
+MPI.Finalize()
+sys.exit(0)

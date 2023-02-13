@@ -3,7 +3,6 @@ from classy import Class
 from scipy.stats import qmc
 import pickle as pkl
 import sys
-import psutil
 import datetime
 import os
 from default_module import Parameters
@@ -34,6 +33,9 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 N_slaves = comm.Get_size()-1
 get_slave = itertools.cycle(range(1,N_slaves+1))
+
+nfailed = np.zeros(1)
+total_failed = np.zeros(1)
 
 ## rank == 0 (master)
 if rank == 0:
@@ -313,8 +315,13 @@ else:
                         f.write(str(m)+'\t')
                     else:
                         f.write(str(m)+'\n')
-
+        else:
+            nfailed[0]+=1
         cosmo.struct_cleanup()
 
+comm.Reduce(nfailed, total_failed, MPI.SUM, 0)
+if(rank==0):
+    print("{0}/{1} models succeeded".format(len(data)-total_failed[0], len(data)))
+comm.Barrier()
 MPI.Finalize()
 sys.exit(0)

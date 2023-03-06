@@ -14,9 +14,10 @@ class cobaya(MCMC_base_class):
             mpi_flag = f" -np 4 --host {self.mcmc_node}"
         else:
             mpi_flag = " -np 4"
-        my_env = os.environ.copy()
-        my_env["PYTHONPATH"] = "/Users/gabe/projects/connect:" + my_env["PYTHONPATH"]
-        sp.Popen(f"/Users/gabe/opt/miniforge3/envs/connect_x86/bin/mpirun {mpi_flag} python {self.CONNECT_PATH}/source/mcmc_samplers/run_scripts/run_cobaya_iteration.py {model} {iteration} {self.param.param_file}".split(), env=my_env).wait()
+        #my_env = os.environ.copy()
+        #my_env["PYTHONPATH"] = "/home/gplynch/projects/connect_public:"+ my_env["PYTHONPATH"]
+        #sp.Popen(f"/Users/gabe/opt/miniforge3/envs/connect_x86/bin/mpirun {mpi_flag} python {self.CONNECT_PATH}/source/mcmc_samplers/run_scripts/run_cobaya_iteration.py {model} {iteration} {self.param.param_file}".split(), env=my_env).wait()
+        sp.Popen(f"mpirun {mpi_flag} python {self.CONNECT_PATH}/source/mcmc_samplers/run_scripts/run_cobaya_iteration.py {model} {iteration} {self.param.param_file}".split()).wait()
     
     def get_number_of_accepted_steps(self, iteration):
         directory = os.path.join(self.CONNECT_PATH,f'data/{self.param.jobname}/number_{iteration}')

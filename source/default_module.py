@@ -33,6 +33,7 @@ class Parameters():
         self.N_max_points         = getattr(param, 'N_max_points',         10000               )
         self.normalization_method = getattr(param, 'normalization_method', 'standardization'   )
         self.sampling             = getattr(param, 'sampling',             'lhc'               )
+        self.input_model_file     = getattr(param, 'input_model_file',     None                )
         self.mcmc_sampler         = getattr(param, 'mcmc_sampler',         'cobaya'            )
         self.initial_model        = getattr(param, 'initial_model',        None                )
         self.resume_iterations    = getattr(param, 'resume_iterations',    False               )

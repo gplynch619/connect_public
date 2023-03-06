@@ -3,6 +3,7 @@ from classy import Class
 from scipy.stats import qmc
 import pickle as pkl
 import sys
+sys.path.insert(0, '/home/gplynch/projects/connect_public')
 import datetime
 import os
 from default_module import Parameters
@@ -40,7 +41,8 @@ total_failed = np.zeros(1)
 ## rank == 0 (master)
 if rank == 0:
     if sampling == 'iterative':
-        exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        #exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        exec(f'from mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
         _locals = {}
         exec(f'mcmc = {param.mcmc_sampler}(param, CONNECT_PATH)', locals(), _locals)
         mcmc = _locals['mcmc']
@@ -49,18 +51,21 @@ if rank == 0:
 
         
     elif sampling == 'lhc':
-        with open(os.path.join(CONNECT_PATH, f'data/lhc_samples/{len(param.parameters.keys())}_{param.N}.sample'),'rb') as f:
-            sample = pkl.load(f)
-        data = sample.T
-        for i, name in enumerate(param_names):
-            if name in param.log_priors:
-                data[i] *= np.log10(param.parameters[name][1]) - np.log10(param.parameters[name][0])
-                data[i] += np.log10(param.parameters[name][0])
-                data[i] = np.power(10.,data[i])
-            else:
-                data[i] *= param.parameters[name][1] - param.parameters[name][0]
-                data[i] += param.parameters[name][0]
-        data = data.T
+        if param.input_model_file is not None:
+            data = np.load(param.input_model_file)
+        else:
+            with open(os.path.join(CONNECT_PATH, f'data/lhc_samples/{len(param.parameters.keys())}_{param.N}.sample'),'rb') as f:
+                sample = pkl.load(f)
+            data = sample.T
+            for i, name in enumerate(param_names):
+                if name in param.log_priors:
+                    data[i] *= np.log10(param.parameters[name][1]) - np.log10(param.parameters[name][0])
+                    data[i] += np.log10(param.parameters[name][0])
+                    data[i] = np.power(10.,data[i])
+                else:
+                    data[i] *= param.parameters[name][1] - param.parameters[name][0]
+                    data[i] += param.parameters[name][0]
+            data = data.T
 
 
     sleep_short = 0.0001

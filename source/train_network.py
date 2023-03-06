@@ -38,7 +38,6 @@ class Training():
         self.output_interval  = {}
         output_size_iter      = 0
         self.output_normalize['method'] = self.param.normalization_method
-
         ### Load input ###
         with open(os.path.join(self.load_path, 'model_params.txt'), 'r') as f:
             for line in f:
@@ -298,7 +297,7 @@ class Training():
             del out_x_min
             del out_x_max
 
-
+        
         ### Prepare output info dictionary for model ###
         self.output_info = {'input_names':    paramnames,
                             'normalize':      self.output_normalize,
@@ -316,7 +315,6 @@ class Training():
         if len(self.param.output_derived) > 0:
             self.output_info['output_derived'] = self.param.output_derived
 
-
         ### Convert data to tensors ###
         model_params_tf = tf.constant(model_params)
         model_params = []
@@ -329,7 +327,6 @@ class Training():
         output_tf = []
         del model_params_tf
         del output_tf
-
 
         ### Shuffle dataset and split in training, test and validation ###
         dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
@@ -369,7 +366,6 @@ class Training():
         else:
             self.loss_fun = self.param.loss_function
 
-
         ### Normalize input data ###
         self.normalizer = tf.keras.layers.experimental.preprocessing.Normalization(input_dim=input_dim)
         self.normalizer.adapt(np.concatenate([x for x, y in self.train_dataset], axis=0))
@@ -384,7 +380,7 @@ class Training():
         if epochs != None:
             self.param.epochs = epochs
 
-        adam = tf.keras.optimizers.Adam(learning_rate=0.001,
+        adam = tf.keras.optimizers.Adam(learning_rate=0.0005, #default 0.001
                                         beta_1=0.9,
                                         beta_2=0.999,
                                         epsilon=1e-5,
@@ -397,7 +393,6 @@ class Training():
         if output_file != None:
             stdout_backup = sys.stdout
             sys.stdout = open(output_file, 'w')
-
         while not self.training_success:
             # beginning of while loop
             training_try_number += 1

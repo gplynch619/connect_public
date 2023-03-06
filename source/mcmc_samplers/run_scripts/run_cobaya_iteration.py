@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/home/gplynch/projects/connect_public')
 from cobaya.run import run
 from cobaya.log import LoggedError
 from source.default_module import Parameters
@@ -8,6 +10,7 @@ import pickle as pkl
 from pathlib import Path
 import sys
 
+#os.system("source /home/gplynch/projects/connect_public/jobscripts/environment_setup.sh")
 
 model = sys.argv[1]
 iteration = sys.argv[2]

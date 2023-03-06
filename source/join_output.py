@@ -20,7 +20,6 @@ class CreateSingleDataFile():
             counts = []
             Cl_out_1 = self.param.output_Cl[0]
             for filename in sorted(os.listdir(os.path.join(self.path, f'Cl_{Cl_out_1}_data'))):
-                print(filename)
                 if filename.endswith('.txt'):
                     with open(os.path.join(self.path, f'Cl_{Cl_out_1}_data', filename),'r') as f:
                         try:

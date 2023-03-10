@@ -41,7 +41,7 @@ lkls = {'Planck_highl_TTTEEE_lite': {'name': 'planck_2018_highl_plik.TTTEEE_lite
                                      'clik': os.path.join(path_clik, 'low_l/commander'),
                                      'path': os.path.join(path['cosmo'], 'cobaya/custom_likelihoods')},
         'Planck_lowl_EE':           {'name': 'planck_2018_lowl.EE',
-                                     'clik': os.path.join(path_clik, 'low_l/commander'),
+                                     'clik': os.path.join(path_clik, 'low_l/simall'),
                                      'path': os.path.join(path['cosmo'], 'cobaya/custom_likelihoods')}}
 
 
@@ -68,8 +68,10 @@ for lkl in param.sampling_likelihoods:
         for name in os.listdir(lkls[lkl]['clik']):
             if 'TTTEEE' in lkl and name.endswith('TTTEEE.clik'):
                 clik_file = os.path.join(lkls[lkl]['clik'], name)
+                break
             elif name.endswith('.clik'):
                 clik_file = os.path.join(lkls[lkl]['clik'], name)
+                break
         info['likelihood'][lkls[lkl]['name']] = {'clik_file':   clik_file,
                                                  'python_path': lkls[lkl]['path']}
     else:

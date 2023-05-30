@@ -77,6 +77,24 @@ class CreateSingleDataFile():
                             for line in g:
                                 f.write(line)
 
+        for output in self.param.output_z:
+            z_header = True
+            with open(os.path.join(self. path, f"{output}_z.txt"), 'w') as f:
+                for filename in sorted(os.listdir(os.path.join(self.path, f'{output}_z_data'))):
+                    if filename.endswith('.txt'):
+                        with open(os.path.join(self.path, f'{output}_z_data', filename), 'r') as g:
+                            g_list = list(g)
+                            if z_header:
+                                zgrid = self.param.output_z_grids[output]
+                                for i, z in enumerate(zgrid):
+                                    if i != len(zgrid)-1:
+                                        f.write(str(z)+'\t')
+                                    else:
+                                        f.write(str(z)+'\n')
+                                z_header = False
+                            for i,line in enumerate(g_list):
+                                if i%2==1:
+                                    f.write(line)
 
         for output in self.param.output_bg + self.param.output_th:
             with open(os.path.join(self.path, f'{output}.txt'),'w') as f:

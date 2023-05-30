@@ -84,7 +84,7 @@ class Training():
                     out = np.array(out) + offset
                 else:
                     self.output_normalize['Cl'][output].append(0)
-                out = np.log(out)
+                    out = np.log(out)
                 if np.min(out) <= 0:
                     offset = -(np.min(out)*1.01)
                     self.output_normalize['Cl'][output].append(offset)
@@ -94,6 +94,48 @@ class Training():
                 out = np.log(out)
             outputs.append(out)
             self.output_interval['Cl'][output] = [output_size_iter, output_size_iter + len(out[0])]
+            output_size_iter += len(out[0])
+
+
+        if len(self.param.output_z) > 0:
+            if self.output_normalize['method'] in ['factor','log']:
+                self.output_normalize['z_func'] = {}
+            self.output_interval['z_func']  = {}
+        for output in self.param.output_z:
+            out = []
+            with open(os.path.join(self.load_path, f'{output}_z.txt'), 'r') as f:
+                for i, line in enumerate(f):
+                    if i == 0:
+                        z = np.float32(line.replace('\n','').split('\t'))
+                        if not hasattr(self, 'output_z_grids'):
+                            self.param.output_z_grids[output] = z
+                    else:
+                        if i == 1:
+                            if self.output_normalize['method'] == 'factor':
+                                self.output_normalize['z_func'][output] = 1./max(
+                                    np.float32(line.replace('\n','').split('\t')))
+                        if self.output_normalize['method'] == 'factor':
+                            out.append(self.output_normalize['z_func'][output]*np.float32(line.replace('\n','').split('\t')))
+                        else:
+                            out.append(np.float32(line.replace('\n','').split('\t')))
+            if self.output_normalize['method'] == 'log':
+                self.output_normalize['z_func'][output] = []
+                if np.min(out) <= 0:
+                    offset = -(np.min(out)*1.01)
+                    self.output_normalize['z_func'][output].append(offset)
+                    out = np.array(out) + offset
+                else:
+                    self.output_normalize['z_func'][output].append(0)
+                    out = np.log(out)
+                if np.min(out) <= 0:
+                    offset = -(np.min(out)*1.01)
+                    self.output_normalize['z_func'][output].append(offset)
+                    out = np.array(out) + offset
+                else:
+                    self.output_normalize['z_func'][output].append(0)
+                out = np.log(out)
+            outputs.append(out)
+            self.output_interval['z_func'][output] = [output_size_iter, output_size_iter + len(out[0])]
             output_size_iter += len(out[0])
 
 
@@ -226,9 +268,9 @@ class Training():
         
         self.output_dim = output_size_iter
 
-
+        print(len(outputs))
         outputs = np.concatenate(outputs, axis=1)
-
+        print(self.output_interval.items())
 
         if self.output_normalize['method'] == 'standardization':
             def normalize_with_moments(x, epsilon=1e-20):
@@ -238,6 +280,8 @@ class Training():
                 variance = var
                 x_normed = (x - mean) / np.sqrt(var + epsilon) # epsilon to avoid dividing by zero
                 var = np.var(x_normed)
+                if var==0: ### CHECK THIS
+                    return x_normed, mean, variance
                 while var > 1+delta or var < 1-delta:
                     x_normed = x_normed/np.sqrt(var + epsilon)
                     variance = (variance + epsilon)*(var + epsilon)
@@ -249,13 +293,13 @@ class Training():
             out_mean = []
             out_var = []
             outputs = []
-
+            i=0
             for n in out_nodes:
                 data, mean, var = normalize_with_moments(n)
                 outputs.append(data)
                 out_mean.append(mean)
                 out_var.append(var)
-            
+                i+=1
             outputs = np.array(outputs).T
             self.output_normalize['mean'] = out_mean
             self.output_normalize['variance'] = out_var
@@ -308,6 +352,9 @@ class Training():
             self.output_info['output_Cl'] = self.param.output_Cl
         if len(self.param.output_Pk) > 0:
             self.output_info['output_Pk'] = self.param.output_Pk
+        if len(self.param.output_z) > 0:
+            self.output_info["output_z_grids"] = self.param.output_z_grids
+            self.output_info["output_z"] = self.param.output_z
         if len(self.param.output_bg) > 0:
             self.output_info['output_bg'] = self.param.output_bg
         if len(self.param.output_th) > 0:

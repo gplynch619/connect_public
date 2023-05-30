@@ -1,6 +1,7 @@
 import numpy as np
 from classy import Class
 from scipy.stats import qmc
+from scipy.interpolate import interp1d
 import pickle as pkl
 import sys
 sys.path.insert(0, '/home/gplynch/projects/connect_public')
@@ -101,12 +102,15 @@ else:
     in_dir           = os.path.join(directory, f'model_params_data/model_params_{rank}.txt')
     out_dirs_Cl      = []
     out_dirs_Pk      = []
+    out_dirs_z       = []
     out_dirs_bg      = []
     out_dirs_th      = []
     for Cl in param.output_Cl:
         out_dirs_Cl.append(os.path.join(directory, f'Cl_{Cl}_data/Cl_{Cl}_data_{rank}.txt'))
     for Pk in param.output_Pk:
         out_dirs_Pk.append(os.path.join(directory, f'Pk_{Pk}_data/Pk_{Pk}_data_{rank}.txt'))
+    for quant in param.output_z:
+        out_dirs_z.append(os.path.join(directory, f'{quant}_z_data/{quant}_z_data_{rank}.txt'))
     if len(param.output_Pk) > 0:
         out_dir_kz_array = os.path.join(directory, f'Pk_kz_array.txt')
     for bg in param.output_bg:
@@ -134,7 +138,7 @@ else:
     with open(in_dir, 'w') as f:
         f.write(param_header)
 
-    for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_bg + out_dirs_th:
+    for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_z + out_dirs_bg + out_dirs_th:
         with open(out_dir, 'w') as f:
             f.write('')
     try:
@@ -181,7 +185,28 @@ else:
                 else:
                     params['output']    = 'mPk'
             if not 'P_k_max_h/Mpc' in params.keys():
-                params['P_k_max_h/Mpc'] = 1.
+                if not "P_k_max_1/Mpc" in params.keys():
+                    params['P_k_max_h/Mpc'] = 1.
+        
+        if 'sigma8' in param.output_z:
+            if "z_max_pk" in params:
+                max_pk_z = params["z_max_pk"]
+            else:
+                max_pk_z = 0
+            if not 'mPk' in params['output']:
+                if len(params['output']) > 0:
+                    params['output']   += ',mPk'
+                else:
+                    params['output']    = 'mPk'
+            if not 'P_k_max_h/Mpc' in params.keys():
+                if not "P_k_max_1/Mpc" in params.keys():
+                    params['P_k_max_h/Mpc'] = 1.
+            if np.max(param.output_z_grids["sigma8"])>max_pk_z:
+                params["z_max_pk"] = np.max(param.output_z_grids["sigma8"])
+            if not 'P_k_max_h/Mpc' in params.keys():
+                if not "P_k_max_1/Mpc" in params.keys():
+                    params['P_k_max_h/Mpc'] = 1.
+
 
         params.update(param.extra_input) # should include necessary perturbation parameters
         for i, par_name in enumerate(param_names):
@@ -219,6 +244,10 @@ else:
                 except:
                     cls = get_computed_cls(cosmo)
                 ell = cls['ell'][2:]
+            if "x_e" in param.output_z:
+                th = cosmo.get_thermodynamics()
+            if "g" in param.output_z:
+                th = cosmo.get_thermodynamics()
             success = True
         except:
             print('The following model failed in CLASS:', flush=True)
@@ -284,6 +313,33 @@ else:
                         f.write(f'{z}\t')
             except:
                 pass
+
+            for out_dir, output in zip(out_dirs_z, param.output_z):
+                zgrid = param.output_z_grids[output]
+                if output=="H":
+                    par_out = np.array([cosmo.Hubble(z) for z in zgrid])
+                if output=="DA":
+                    par_out = np.array([cosmo.angular_distance(z)*(1+z) for z in zgrid])
+                if output=="sigma8":
+                    h = cosmo.get_current_derived_parameters(["h"])["h"]
+                    par_out = np.array([cosmo.sigma(8./h, z) for z in zgrid])
+                if output=="x_e":
+                    xe_func = interp1d(th["z"], th["x_e"])
+                    par_out = xe_func(zgrid)
+                if output=="g":
+                    g_func = interp1d(th["z"], th["kappa' [Mpc^-1]"]*th["exp(-kappa)"])
+                    par_out = g_func(zgrid)
+                with open(out_dir, 'a') as f:
+                    for i, z in enumerate(zgrid):
+                        if i != len(zgrid)-1:
+                            f.write(str(z)+'\t')
+                        else:
+                            f.write(str(z)+'\n')
+                    for i, p in enumerate(par_out):
+                        if i != len(par_out)-1:
+                            f.write(str(p)+'\t')
+                        else:
+                            f.write(str(p)+'\n')
 
             if len(param.output_derived) > 0:
                 par_out = []

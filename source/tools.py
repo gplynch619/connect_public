@@ -59,6 +59,8 @@ def create_output_folders(param,            # Parameter object
                     os.mkdir(os.path.join(path, f'N-{param.N}/Cl_{output}_data'))
                 for output in param.output_Pk:
                     os.mkdir(os.path.join(path, f'N-{param.N}/Pk_{output}_data'))
+                for output in param.output_z:
+                    os.mkdir(os.path.join(path, f'N-{param.N}/{output}_z_data'))
                 for output in param.output_bg:
                     os.mkdir(os.path.join(path, f'N-{param.N}/{output}_data'))
                 for output in param.output_th:
@@ -82,6 +84,9 @@ def create_output_folders(param,            # Parameter object
             for output in param.output_Pk:
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/Pk_{output}_data')}")
                 os.mkdir(os.path.join(path, f'number_{iter_num}/Pk_{output}_data'))
+            for output in param.output_z:
+                os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/{output}_z_data')}")
+                os.mkdir(os.path.join(path,  f'number_{iter_num}/{output}_z_data'))
             for output in param.output_bg:
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/{output}_data')}")
                 os.mkdir(os.path.join(path, f'number_{iter_num}/{output}_data'))
@@ -128,6 +133,9 @@ def combine_iterations_data(param,             # Parameter object
     for output in param.output_Pk:
         combine_sets_of_data_files(os.path.join(path_i, f'Pk_{output}.txt'),
                                    os.path.join(path_j, f'Pk_{output}.txt'))
+    for output in param.output_z:
+        combine_sets_of_data_files(os.path.join(path_i, f'{output}_z.txt'),
+                                   os.path.join(path_j, f'{output}_z.txt'))
     for output in param.output_bg:
         combine_sets_of_data_files(os.path.join(path_i, f'Cl_{output}.txt'),
                                    os.path.join(path_j, f'Cl_{output}.txt'))

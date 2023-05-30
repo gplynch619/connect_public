@@ -25,6 +25,8 @@ class Parameters():
         self.output_activation    = getattr(param, 'output_activation',    False               )
         self.extra_input          = getattr(param, 'extra_input',          {}                  )
         self.output_Cl            = getattr(param, 'output_Cl',            ['tt']              )
+        self.output_z             = getattr(param, "output_z",             []                  )
+        self.output_z_grids       = getattr(param, "output_z_grids",       self.get_z_grids()  )
         self.output_Pk            = getattr(param, 'output_Pk',            []                  )
         self.output_Pk_grid       = getattr(param, 'output_Pk_grid',       self.get_kz_array() )
         self.output_bg            = getattr(param, 'output_bg',            []                  )
@@ -70,3 +72,24 @@ class Parameters():
             return [k_vec, z_vec]
         else:
             return None
+        
+    def get_z_grids(self):
+        grids = {}
+        if "H" in self.output_z:
+            z = np.logspace(-2, np.log10(5), 49)
+            z = np.insert(z, 0, 0.0)
+            grids["H"] = z
+        if "DA" in self.output_z:
+            z = np.logspace(-2, np.log10(5), 49)
+            z = np.insert(z, 0, 0.0)
+            grids["DA"] = z
+        if "sigma8" in self.output_z:
+            z = np.logspace(-2, np.log10(5), 49)
+            z = np.insert(z, 0, 0.0)
+            grids["sigma8"] = z
+        if "x_e" in self.output_z:
+            grids["x_e"] = np.linspace(500, 1700, 100)
+        if "g" in self.output_z:
+            grids["g"] = np.linspace(600, 1500, 100)
+        
+        return grids

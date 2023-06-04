@@ -30,6 +30,9 @@ if sampling == 'iterative':
         directory = os.path.join(path, f'N-{param.N}')
 elif sampling == 'lhc':
     directory = os.path.join(path, f'N-{param.N}')
+elif sampling == "recompute":
+    directory = os.path.join(path, "number_0")
+    model_progress_file = os.path.join(directory, "model_progress.txt")
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
@@ -67,7 +70,34 @@ if rank == 0:
                     data[i] *= param.parameters[name][1] - param.parameters[name][0]
                     data[i] += param.parameters[name][0]
             data = data.T
-
+    
+    elif sampling == "recompute":
+        try:
+            data = []
+            with open(param.input_model_file, "r") as f:
+                for line in f:
+                    if line[0] == '#':
+                        paramnames = line[2:].replace('\n','').split('\t')
+                    else:
+                        line_vals = []
+                        for name in list(param.parameters.keys()):
+                            idx = paramnames.index(name)
+                            line_vals.append(line.replace('\n','').split('\t')[idx])
+                        line_vals = np.float32(line_vals)
+                        data.append(line_vals)
+            data = np.array(data)
+        except FileNotFoundError:
+            print(f'Unable to open file {param.input_model_file}')
+        
+        if os.path.exists(model_progress_file):
+            already_computed_idx = set(np.loadtxt(model_progress_file).flatten())
+            total_idx = set(np.arange(len(data)))
+            remaining_idx = list(already_computed_idx ^ total_idx)
+            data = data[remaining_idx]
+        else:
+            remaining_idx = np.arange(len(data))
+            with open(model_progress_file, 'w') as f:
+                f.write('')
 
     sleep_short = 0.0001
     sleep_long = 0.1
@@ -79,8 +109,14 @@ if rank == 0:
     while len(data) > data_idx:
         r = next(get_slave)
         if comm.iprobe(r):
-            useless_info = comm.recv(source=r)
-            comm.send(data[data_idx], dest=r)
+            last_model_id = int(comm.recv(source=r))
+            print("lm id {}".format(last_model_id))
+            model = np.insert(data[data_idx], 0, data_idx)
+            comm.send(model, dest=r)
+            if sampling=="recompute":
+                if last_model_id!=-1:
+                    with open(model_progress_file, "a") as f:
+                        f.write(f"{remaining_idx[last_model_id]}\n")
             data_idx += 1
             sleep_dict[r] = 1
         else:
@@ -139,27 +175,32 @@ else:
         f.write(param_header)
 
     for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_z + out_dirs_bg + out_dirs_th:
-        with open(out_dir, 'w') as f:
-            f.write('')
+        if not os.path.exists(out_dir):
+            with open(out_dir, 'w') as f:
+                f.write('')
     try:
-        with open(out_dir_kz_array, 'w') as f:
-            f.write('')
+        if not os.path.exists(out_dir_kz_array):
+            with open(out_dir_kz_array, 'w') as f:
+                f.write('')
     except:
         pass
     try:
-        with open(out_dir_derived, 'w') as f:
-            f.write(derived_header)
+        if not os.path.exists(out_dir_derived):
+            with open(out_dir_derived, 'w') as f:
+                f.write(derived_header)
     except:
         pass
 
 
     # Iterate over each model
+    last_model_idx = -1
     while True:
-        comm.send('I am done', dest=0)
+        comm.send(last_model_idx, dest=0)
         model = comm.recv(source=0)
         if type(model).__name__ == 'str':
             break
-
+        last_model_idx = model[0]
+        model = model[1:]
         # Set required CLASS parameters
         params = {}
         if len(param.output_Cl) > 0:

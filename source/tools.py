@@ -48,6 +48,33 @@ def create_output_folders(param,            # Parameter object
         path = os.path.join(CONNECT_PATH, f'data/{param.jobname}')
         if not os.path.isdir(path):
             os.mkdir(path)
+        if param.sampling=="recompute":
+            if os.path.exists(os.path.join(path, "number_0/model_progress.txt")):
+                return #if directory already created and recompute in progress, do not make new folders
+            else:
+                os.system(f"rm -rf {os.path.join(path, 'number_0')}")
+                os.mkdir(os.path.join(path, "number_0"))
+                os.mkdir(os.path.join(path, f'number_0/model_params_data'))
+                for output in param.output_Cl:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/Cl_{output}_data')}")
+                    os.mkdir(os.path.join(path, f'number_0/Cl_{output}_data'))
+                for output in param.output_Pk:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/Pk_{output}_data')}")
+                    os.mkdir(os.path.join(path, f'number_0/Pk_{output}_data'))
+                for output in param.output_z:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/{output}_z_data')}")
+                    os.mkdir(os.path.join(path,  f'number_0/{output}_z_data'))
+                for output in param.output_bg:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/{output}_data')}")
+                    os.mkdir(os.path.join(path, f'number_0/{output}_data'))
+                for output in param.output_th:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/{output}_data')}")
+                    os.mkdir(os.path.join(path, f'number_0/{output}_data'))
+                if len(param.output_derived) > 0:
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/derived_data')}")
+                    os.mkdir(os.path.join(path, f'number_0/derived_data'))
+                return
+                   
         if iter_num == None:
             if (reset and param.initial_model == None) or param.sampling == 'lhc':
                 for name in os.listdir(path):

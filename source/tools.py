@@ -59,7 +59,7 @@ def create_output_folders(param,            # Parameter object
                 os.mkdir(os.path.join(path, "number_0"))
                 os.mkdir(os.path.join(path, f'number_0/model_params_data'))
                 for output in param.output_Cl:
-                    os.system(f"rm -rf {os.path.join(jkkjkkkjkpath, f'number_0/Cl_{output}_data')}")
+                    os.system(f"rm -rf {os.path.join(path, f'number_0/Cl_{output}_data')}")
                     os.mkdir(os.path.join(path, f'number_0/Cl_{output}_data'))
                 for output in param.output_Pk:
                     os.system(f"rm -rf {os.path.join(path, f'number_0/Pk_{output}_data')}")

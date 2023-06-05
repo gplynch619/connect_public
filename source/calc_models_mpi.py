@@ -110,7 +110,6 @@ if rank == 0:
         r = next(get_slave)
         if comm.iprobe(r):
             last_model_id = int(comm.recv(source=r))
-            print("lm id {}".format(last_model_id))
             model = np.insert(data[data_idx], 0, data_idx)
             comm.send(model, dest=r)
             if sampling=="recompute":
@@ -171,8 +170,9 @@ else:
             derived_header += der_name+'\t'
 
     # Initialize data files
-    with open(in_dir, 'w') as f:
-        f.write(param_header)
+    if not os.path.exists(in_dir):
+        with open(in_dir, 'w') as f:
+            f.write(param_header)
 
     for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_z + out_dirs_bg + out_dirs_th:
         if not os.path.exists(out_dir):
@@ -190,7 +190,6 @@ else:
                 f.write(derived_header)
     except:
         pass
-
 
     # Iterate over each model
     last_model_idx = -1
@@ -226,7 +225,7 @@ else:
                 else:
                     params['output']    = 'mPk'
             if not 'P_k_max_h/Mpc' in params.keys():
-                if not "P_k_max_1/Mpc" in params.keys():
+                if not "P_k_max_1/Mpc" in param.extra_input.keys():
                     params['P_k_max_h/Mpc'] = 1.
         
         if 'sigma8' in param.output_z:
@@ -240,14 +239,10 @@ else:
                 else:
                     params['output']    = 'mPk'
             if not 'P_k_max_h/Mpc' in params.keys():
-                if not "P_k_max_1/Mpc" in params.keys():
+                if not "P_k_max_1/Mpc" in param.extra_input.keys():
                     params['P_k_max_h/Mpc'] = 1.
             if np.max(param.output_z_grids["sigma8"])>max_pk_z:
                 params["z_max_pk"] = np.max(param.output_z_grids["sigma8"])
-            if not 'P_k_max_h/Mpc' in params.keys():
-                if not "P_k_max_1/Mpc" in params.keys():
-                    params['P_k_max_h/Mpc'] = 1.
-
 
         params.update(param.extra_input) # should include necessary perturbation parameters
         for i, par_name in enumerate(param_names):

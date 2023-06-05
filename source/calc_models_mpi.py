@@ -110,7 +110,6 @@ if rank == 0:
         r = next(get_slave)
         if comm.iprobe(r):
             last_model_id = int(comm.recv(source=r))
-            print("lm id {}".format(last_model_id))
             model = np.insert(data[data_idx], 0, data_idx)
             comm.send(model, dest=r)
             if sampling=="recompute":
@@ -283,7 +282,7 @@ else:
                 try:
                     cls = cosmo.lensed_cl_computed() # Only available in CLASS++
                 except:
-                    cls = get_computed_cls(cosmo)
+                    cls = get_computed_cls(cosmo, ll_max_request=param.ll_max_request)
                 ell = cls['ell'][2:]
             if "x_e" in param.output_z:
                 th = cosmo.get_thermodynamics()

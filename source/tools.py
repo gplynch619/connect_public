@@ -4,14 +4,17 @@ import subprocess as sp
 
 CONNECT_PATH  = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
 
-def get_computed_cls(cosmo       # A computed CLASS model
-                 ):
+def get_computed_cls(cosmo,       # A computed CLASS model
+                 ll_max_request=None):
 
     # get parameters from CLASS model
     BA                 = cosmo.get_background()
     conformal_age_     = BA['conf. time [Mpc]'][-1]
     der_pars           = cosmo.get_current_derived_parameters(['ra_rec','tau_rec'])
-    cls                = cosmo.lensed_cl()
+    if ll_max_request is not None:
+        cls            = cosmo.lensed_cl(ll_max_request)
+    else:
+        cls            = cosmo.lensed_cl()        
     l_max              = len(cls['ell']) - 1
     angular_rescaling_ = der_pars['ra_rec']/(conformal_age_ - der_pars['tau_rec'])
     l_linstep          = 40
@@ -56,7 +59,7 @@ def create_output_folders(param,            # Parameter object
                 os.mkdir(os.path.join(path, "number_0"))
                 os.mkdir(os.path.join(path, f'number_0/model_params_data'))
                 for output in param.output_Cl:
-                    os.system(f"rm -rf {os.path.join(path, f'number_0/Cl_{output}_data')}")
+                    os.system(f"rm -rf {os.path.join(jkkjkkkjkpath, f'number_0/Cl_{output}_data')}")
                     os.mkdir(os.path.join(path, f'number_0/Cl_{output}_data'))
                 for output in param.output_Pk:
                     os.system(f"rm -rf {os.path.join(path, f'number_0/Pk_{output}_data')}")

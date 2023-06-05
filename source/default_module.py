@@ -25,6 +25,7 @@ class Parameters():
         self.output_activation    = getattr(param, 'output_activation',    False               )
         self.extra_input          = getattr(param, 'extra_input',          {}                  )
         self.output_Cl            = getattr(param, 'output_Cl',            ['tt']              )
+        self.ll_max_request       = getattr(param, 'll_max_request',       2500                )
         self.output_z             = getattr(param, "output_z",             []                  )
         self.output_z_grids       = getattr(param, "output_z_grids",       self.get_z_grids()  )
         self.output_Pk            = getattr(param, 'output_Pk',            []                  )

@@ -126,9 +126,13 @@ class Sampling():
         print(f'Using input model list {self.param.input_model_file}', flush=True)
 
         self.call_calc_models(sampling="recompute")
-
         print(f'Computations finished', flush=True)
 
+        tools.join_data_files(self.param)
+        print("Training neural network", flush=True)
+        model = self.train_neural_network(sampling='iterative',
+                                              output_file=os.path.join(self.data_path,
+                                                                       f'number_0/training.log'))
         return 
 
     def copy_param_file(self):

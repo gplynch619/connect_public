@@ -147,6 +147,21 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['latex'] = par
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
+    elif par.startswith('100*theta_star'):
+        info['params']['theta_star_100'] = {}
+        info['params']['theta_star_100']['prior'] = {}
+        info['params']['theta_star_100']['ref'] = {'dist': 'norm'}
+        info['params']['theta_star_100']['prior']['min'] = xmin
+        info['params']['theta_star_100']['prior']['max'] = xmax
+        info['params']['theta_star_100']['ref']['loc']   = guess
+        info['params']['theta_star_100']['ref']['scale'] = sig
+        info['params']['theta_star_100']['proposal'] = proposal
+        info['params']['theta_star_100']['latex'] = par
+        info['params']['theta_star_100']['drop'] = True
+        info['params']['100*theta_star'] = {}
+        info['params']['100*theta_star']['latex'] = par
+        info['params']['100*theta_star']['value'] = 'lambda theta_star_100: theta_star_100'
+        info['params']['100*theta_star']['derived'] = False
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}

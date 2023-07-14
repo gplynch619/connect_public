@@ -22,6 +22,8 @@ class Sampling():
             self.data_path = f'data/{self.param.jobname}/N-{self.param.N}'
         elif self.param.sampling == 'iterative':
             self.data_path = f'data/{self.param.jobname}'
+        elif self.param.sampling == "recompute":
+            self.data_path = f'data/{self.param.jobname}'
 
     def create_lhc_data(self):
         self.latin_hypercube_sampling()
@@ -37,16 +39,28 @@ class Sampling():
         mcmc.check_version()
         if self.param.resume_iterations:
             i = max([int(f.split('number_')[-1]) for f in os.listdir(self.data_path) if f.startswith('number')])
-            print('i =',i)
-            os.system(f"rm -rf {self.data_path}/number_{i}")
-            print('Resuming iterative sampling', flush=True)
-            print(f'Retraining neural network from iteration {i-1}', flush=True)
-            model = self.train_neural_network(sampling='iterative',
-                                              output_file=os.path.join(self.data_path,
-                                                                       f'number_{i-1}/training.log'))
-            if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
-                os.system(f"mkdir {self.data_path}/compare_iterations")
-                mcmc.Gelman_Rubin_log_ini()
+            if i==0:
+                print('i =',i)
+                print('Starting iterative sampling from recomputed model', flush=True)
+                print('Training neural network from iteration 0', flush=True)
+                model = self.train_neural_network(sampling='iterative',
+                                                output_file=os.path.join(self.data_path,
+                                                                        'number_0/training.log'))
+                if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
+                    os.system(f"mkdir {self.data_path}/compare_iterations")
+                    mcmc.Gelman_Rubin_log_ini()
+                i=1
+            else:
+                print('i =',i)
+                os.system(f"rm -rf {self.data_path}/number_{i}")
+                print('Resuming iterative sampling', flush=True)
+                print(f'Retraining neural network from iteration {i-1}', flush=True)
+                model = self.train_neural_network(sampling='iterative',
+                                                output_file=os.path.join(self.data_path,
+                                                                        f'number_{i-1}/training.log'))
+                if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
+                    os.system(f"mkdir {self.data_path}/compare_iterations")
+                    mcmc.Gelman_Rubin_log_ini()
         else:
             self.copy_param_file()
             if not os.path.isdir(self.data_path):
@@ -129,10 +143,7 @@ class Sampling():
         print(f'Computations finished', flush=True)
 
         tools.join_data_files(self.param)
-        print("Training neural network", flush=True)
-        model = self.train_neural_network(sampling='iterative',
-                                              output_file=os.path.join(self.data_path,
-                                                                       f'number_0/training.log'))
+        print(f'Recompute finished. Change sampling type to iterative and re-run the same parameter file.', flush=True)
         return 
 
     def copy_param_file(self):

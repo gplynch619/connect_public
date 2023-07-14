@@ -16,7 +16,7 @@ class CreateSingleDataFile():
             self.path = os.path.join(path, "number_0")
         else:
             self.path  = os.path.join(path, f'N-{self.param.N}')
-        
+    
         if len(self.param.output_Cl) > 0:
             self.ell_common = False
             counts = []

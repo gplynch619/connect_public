@@ -12,7 +12,7 @@ class CreateSingleDataFile():
                 self.path  = os.path.join(path, f'number_{i}')
             except:
                 self.path  = os.path.join(path, f'N-{self.param.N}')
-        if param.sampling == "recompute":
+        elif param.sampling == "recompute":
             self.path = os.path.join(path, "number_0")
         else:
             self.path  = os.path.join(path, f'N-{self.param.N}')

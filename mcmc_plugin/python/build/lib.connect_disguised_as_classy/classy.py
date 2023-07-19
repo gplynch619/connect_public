@@ -261,6 +261,8 @@ class Class(real_classy.Class):
 
         if 'theta_s_100' in names:
             names = [name if name != 'theta_s_100' else '100*theta_s' for name in names]
+        if 'theta_star_100' in names:
+            names = [name if name != 'theta_star_100' else '100*theta_star' for name in names]
 
         names = set(names)
         class_names = names - set(self.output_derived)

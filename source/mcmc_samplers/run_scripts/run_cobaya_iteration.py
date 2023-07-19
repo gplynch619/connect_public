@@ -147,10 +147,6 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['latex'] = par
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
-    elif par.startswith('100*theta_star'):
-        info['params']['theta_star_100'] = {}
-        info['params']['theta_star_100']['latex'] = par
-        info['params']['theta_star_100']['value'] = 'lambda 100*theta_star: 100*theta_star'
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}
@@ -171,6 +167,9 @@ for par in param.output_derived:
     elif par == '100*theta_s':
         info['params']['theta_s_100'] = {}
         info['params']['theta_s_100']['latex'] = par
+    elif par == '100*theta_star':
+        info['params']['theta_star_100'] = {}
+        info['params']['theta_star_100']['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['latex'] = par

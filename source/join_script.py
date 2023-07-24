@@ -1,7 +1,7 @@
 import sys
 from default_module import Parameters
 import os
-from source.join_output import CreateSingleDataFile
+from join_output import CreateSingleDataFile
 
 CONNECT_PATH  = os.path.realpath(os.path.dirname(__file__))
 param_file    = sys.argv[1]

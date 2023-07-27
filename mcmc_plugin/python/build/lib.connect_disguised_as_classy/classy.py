@@ -298,6 +298,47 @@ class Class(real_classy.Class):
 
         return out_dict
 
+    ## Everything below needed for BAO likelihoods - should be all that is needed
+
+    def angular_distance(self, z):
+        # divide emulator result by (1+z), because in calc_models_mpi we save (1+z)*cosmo.angular_distance
+        lim0 = self.output_interval['z_func']["DA"][0]
+        lim1 = self.output_interval['z_func']["DA"][1]
+        DA_on_grid = self.output_predict[lim0:lim1]
+        DA_z_grid = self.output_info["output_z_grids"]["DA"]
+        return CubicSpline(DA_z_grid, DA_on_grid)(z)/(1+z)
+    
+    def Hubble(self, z):
+        lim0 = self.output_interval['z_func']["H"][0]
+        lim1 = self.output_interval['z_func']["H"][1]
+        H_on_grid = self.output_predict[lim0:lim1]
+        H_z_grid = self.output_info["output_z_grids"]["H"]
+
+        return CubicSpline(H_z_grid, H_on_grid)(z)
+    
+    def effective_f_sigma8(self, z):
+        
+        lim0 = self.output_interval['z_func']["sigma8"][0]
+        lim1 = self.output_interval['z_func']["sigma8"][1]
+        sigma8_on_grid = self.output_predict[lim0:lim1]
+        sigma8_z_grid = self.output_info["output_z_grids"]["H"]
+        sigma8_z = CubicSpline(sigma8_z_grid, sigma8_on_grid)
+     
+        if z >= z_step:
+            return (sigma8_z(z-z_step)-sigma8_z(z+z_step))/(2.*z_step)*(1+z)
+        else:
+            # if z is between z_step/10 and z_step, reduce z_step to z, and then stick to two-sided derivative
+            if (z > z_step/10.):
+                z_step = z
+                return (sigma8_z(z-z_step)-sigma8_z(z+z_step))/(2.*z_step)*(1+z)
+            # if z is between 0 and z_step/10, use single-sided derivative with z_step/10
+            else:
+                z_step /=10
+                return ( sigma8_z(z)-sigma8_z(z+z_step))/z_step*(1+z)
+    
+    def rs_drag(self):
+        idx = self.output_interval["derived"]["rs_d"]
+        return self.output_predict[idx]
 
 sys.path.insert(0, p_backup)
 sys.modules['classy'] = m_backup

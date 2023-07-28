@@ -316,7 +316,7 @@ class Class(real_classy.Class):
 
         return CubicSpline(H_z_grid, H_on_grid)(z)
     
-    def effective_f_sigma8(self, z):
+    def effective_f_sigma8(self, z, z_step=0.1):
         
         lim0 = self.output_interval['z_func']["sigma8"][0]
         lim1 = self.output_interval['z_func']["sigma8"][1]

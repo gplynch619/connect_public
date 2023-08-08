@@ -80,14 +80,14 @@ class Parameters():
             z = np.logspace(-2, np.log10(5), 49)
             z = np.insert(z, 0, 0.0)
             grids["H"] = z
-        if "DA" in self.output_z:
+        if "angular_distance" in self.output_z:
             z = np.logspace(-2, np.log10(5), 49)
             z = np.insert(z, 0, 0.0)
-            grids["DA"] = z
-        if "sigma8" in self.output_z:
+            grids["angular_distance"] = z
+        if "sigma8_z" in self.output_z:
             z = np.logspace(-2, np.log10(5), 49)
             z = np.insert(z, 0, 0.0)
-            grids["sigma8"] = z
+            grids["sigma8_z"] = z
         if "x_e" in self.output_z:
             grids["x_e"] = np.linspace(500, 1700, 100)
         if "g" in self.output_z:

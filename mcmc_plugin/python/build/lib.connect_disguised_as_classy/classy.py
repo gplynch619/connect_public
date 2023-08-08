@@ -302,11 +302,11 @@ class Class(real_classy.Class):
 
     def angular_distance(self, z):
         # divide emulator result by (1+z), because in calc_models_mpi we save (1+z)*cosmo.angular_distance
-        lim0 = self.output_interval['z_func']["DA"][0]
-        lim1 = self.output_interval['z_func']["DA"][1]
+        lim0 = self.output_interval['z_func']["angular_distance"][0]
+        lim1 = self.output_interval['z_func']["angular_distance"][1]
         DA_on_grid = self.output_predict[lim0:lim1]
-        DA_z_grid = self.output_info["output_z_grids"]["DA"]
-        return CubicSpline(DA_z_grid, DA_on_grid)(z)/(1+z)
+        DA_z_grid = self.output_info["output_z_grids"]["angular_distance"]
+        return CubicSpline(DA_z_grid, DA_on_grid)(z)
     
     def Hubble(self, z):
         lim0 = self.output_interval['z_func']["H"][0]
@@ -318,10 +318,10 @@ class Class(real_classy.Class):
     
     def effective_f_sigma8(self, z, z_step=0.1):
         
-        lim0 = self.output_interval['z_func']["sigma8"][0]
-        lim1 = self.output_interval['z_func']["sigma8"][1]
+        lim0 = self.output_interval['z_func']["sigma8_z"][0]
+        lim1 = self.output_interval['z_func']["sigma8_z"][1]
         sigma8_on_grid = self.output_predict[lim0:lim1]
-        sigma8_z_grid = self.output_info["output_z_grids"]["H"]
+        sigma8_z_grid = self.output_info["output_z_grids"]["sigma8_z"]
         sigma8_z = CubicSpline(sigma8_z_grid, sigma8_on_grid)
      
         if z >= z_step:

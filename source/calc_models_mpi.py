@@ -228,7 +228,7 @@ else:
                 if not "P_k_max_1/Mpc" in param.extra_input.keys():
                     params['P_k_max_h/Mpc'] = 1.
         
-        if 'sigma8' in param.output_z:
+        if 'sigma8_z' in param.output_z:
             if "z_max_pk" in params:
                 max_pk_z = params["z_max_pk"]
             else:
@@ -241,8 +241,8 @@ else:
             if not 'P_k_max_h/Mpc' in params.keys():
                 if not "P_k_max_1/Mpc" in param.extra_input.keys():
                     params['P_k_max_h/Mpc'] = 1.
-            if np.max(param.output_z_grids["sigma8"])>max_pk_z:
-                params["z_max_pk"] = np.max(param.output_z_grids["sigma8"])
+            if np.max(param.output_z_grids["sigma8_z"])>max_pk_z:
+                params["z_max_pk"] = np.max(param.output_z_grids["sigma8_z"])
 
         params.update(param.extra_input) # should include necessary perturbation parameters
         for i, par_name in enumerate(param_names):
@@ -354,9 +354,9 @@ else:
                 zgrid = param.output_z_grids[output]
                 if output=="H":
                     par_out = np.array([cosmo.Hubble(z) for z in zgrid])
-                if output=="DA":
-                    par_out = np.array([cosmo.angular_distance(z)*(1+z) for z in zgrid])
-                if output=="sigma8":
+                if output=="angular_distance":
+                    par_out = np.array([cosmo.angular_distance(z) for z in zgrid])
+                if output=="sigma8_z":
                     h = cosmo.get_current_derived_parameters(["h"])["h"]
                     par_out = np.array([cosmo.sigma(8./h, z) for z in zgrid])
                 if output=="x_e":

@@ -427,7 +427,7 @@ class Training():
         if epochs != None:
             self.param.epochs = epochs
 
-        adam = tf.keras.optimizers.Adam(learning_rate=0.0005, #default 0.001
+        adam = tf.keras.optimizers.Adam(learning_rate=0.0001, #default 0.001
                                         beta_1=0.9,
                                         beta_2=0.999,
                                         epsilon=1e-5,

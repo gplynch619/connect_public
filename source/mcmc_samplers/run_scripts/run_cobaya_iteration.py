@@ -147,6 +147,16 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['latex'] = par
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
+    elif par.startswith("q_"):
+        if param.control_point_priors is not None:
+            info['params'][par] = {}
+            info["params"][par]['prior'] = {'dist': 'logistic'}
+            info["params"][par]['prior']["loc"] = param.control_point_priors[par]
+            info['params'][par]['ref'] = {'dist': 'norm'}
+            info['params'][par]['ref']['loc']   = guess
+            info['params'][par]['ref']['scale'] = sig
+            info['params'][par]['proposal'] = proposal
+            info['params'][par]['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}

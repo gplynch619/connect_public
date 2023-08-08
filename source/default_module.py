@@ -40,6 +40,7 @@ class Parameters():
         self.mcmc_sampler         = getattr(param, 'mcmc_sampler',         'cobaya'            )
         self.initial_model        = getattr(param, 'initial_model',        None                )
         self.resume_iterations    = getattr(param, 'resume_iterations',    False               )
+        self.control_point_priors = getattr(param, 'control_point_priors', None                )
         self.prior_ranges         = getattr(param, 'prior_ranges',         {}                  )
         self.log_priors           = getattr(param, 'log_priors',           []                  )
         self.bestfit_guesses      = getattr(param, 'bestfit_guesses',      {}                  )
@@ -89,7 +90,7 @@ class Parameters():
             z = np.insert(z, 0, 0.0)
             grids["sigma8_z"] = z
         if "x_e" in self.output_z:
-            grids["x_e"] = np.linspace(500, 1700, 100)
+            grids["x_e"] = np.linspace(700, 1700, 100)
         if "g" in self.output_z:
             grids["g"] = np.linspace(600, 1500, 100)
         

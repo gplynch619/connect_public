@@ -279,6 +279,9 @@ else:
                     cls = cosmo.lensed_cl_computed() # Only available in CLASS++
                 except:
                     cls = get_computed_cls(cosmo, ll_max_request=param.ll_max_request)
+                for k,v in cls.items():
+                    if np.isnan(v).any()==True:
+                        raise ValueError
                 ell = cls['ell'][2:]
             if "x_e" in param.output_z:
                 th = cosmo.get_thermodynamics()

@@ -54,13 +54,22 @@ class Sampling():
                 print('i =',i)
                 os.system(f"rm -rf {self.data_path}/number_{i}")
                 print('Resuming iterative sampling', flush=True)
-                print(f'Retraining neural network from iteration {i-1}', flush=True)
-                model = self.train_neural_network(sampling='iterative',
-                                                output_file=os.path.join(self.data_path,
-                                                                        f'number_{i-1}/training.log'))
-                if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
-                    os.system(f"mkdir {self.data_path}/compare_iterations")
-                    mcmc.Gelman_Rubin_log_ini()
+                if i==1:
+                    print(f'Retraining neural network from LHC data', flush=True)
+                    model = self.train_neural_network(sampling='lhc',
+                                            output_file=os.path.join(self.data_path, 
+                                                                       f'N-{self.param.N}/training.log'))
+                    if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
+                        os.system(f"mkdir {self.data_path}/compare_iterations")
+                        mcmc.Gelman_Rubin_log_ini()
+                else:
+                    print(f'Retraining neural network from iteration {i-1}', flush=True)
+                    model = self.train_neural_network(sampling='iterative',
+                                                    output_file=os.path.join(self.data_path,
+                                                                            f'number_{i-1}/training.log'))
+                    if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
+                        os.system(f"mkdir {self.data_path}/compare_iterations")
+                        mcmc.Gelman_Rubin_log_ini()
         else:
             self.copy_param_file()
             if not os.path.isdir(self.data_path):

@@ -268,7 +268,8 @@ class Training():
         
         self.output_dim = output_size_iter
 
-        print(len(outputs))
+
+
         outputs = np.concatenate(outputs, axis=1)
         print(self.output_interval.items())
 

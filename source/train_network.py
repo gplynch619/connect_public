@@ -431,9 +431,15 @@ class Training():
         adam = tf.keras.optimizers.Adam(learning_rate=0.0001, #default 0.001
                                         beta_1=0.9,
                                         beta_2=0.999,
-                                        epsilon=1e-5,
+                                        epsilon=1e-4,
                                         amsgrad=False,
                                         name='Adam')
+        ## SGD optimizer with default params
+        #adam = tf.keras.optimizers.SGD(learning_rate=0.01,
+        #                                momentum=0.0,
+        #                                nesterov=False,
+        #                                name='SGD')
+
 
         self.training_success = False
         training_try_number = 0

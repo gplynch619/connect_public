@@ -184,6 +184,7 @@ for par in param.output_derived:
         info['params'][par] = {}
         info['params'][par]['latex'] = par
 
+info["debug"] = True
 updated_info, sampler = run(info)
 
 list_of_chains = comm.gather(sampler.products()["sample"].to_numpy(), root=0)

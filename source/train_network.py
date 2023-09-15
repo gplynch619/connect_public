@@ -109,6 +109,7 @@ class Training():
                         z = np.float32(line.replace('\n','').split('\t'))
                         if not hasattr(self, 'output_z_grids'):
                             self.param.output_z_grids[output] = z
+                        ell_weights.append(10**4*np.ones(line.count('\t')+1))
                     else:
                         if i == 1:
                             if self.output_normalize['method'] == 'factor':
@@ -428,7 +429,7 @@ class Training():
         if epochs != None:
             self.param.epochs = epochs
 
-        adam = tf.keras.optimizers.Adam(learning_rate=0.0001, #default 0.001
+        adam = tf.keras.optimizers.Adam(learning_rate=0.001, #default 0.001
                                         beta_1=0.9,
                                         beta_2=0.999,
                                         epsilon=1e-4,

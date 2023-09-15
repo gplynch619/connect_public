@@ -6,7 +6,9 @@ class CreateSingleDataFile():
     def __init__(self, param, CONNECT_PATH):
         self.param = param
         path = os.path.join(CONNECT_PATH, f'data/{self.param.jobname}')
+        print("path {}".format(path))
         if param.sampling == 'iterative':
+            print([int(f.split('number_')[-1]) for f in os.listdir(path) if f.startswith('number')])
             try:
                 i = max([int(f.split('number_')[-1]) for f in os.listdir(path) if f.startswith('number')])
                 self.path  = os.path.join(path, f'number_{i}')

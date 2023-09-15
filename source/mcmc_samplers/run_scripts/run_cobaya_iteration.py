@@ -152,10 +152,10 @@ for par,interval in param.parameters.items():
             info['params'][par] = {}
             info["params"][par]['prior'] = {'dist': 'logistic'}
             info["params"][par]['prior']["loc"] = param.control_point_priors[par]
-            info['params'][par]['ref'] = {'dist': 'norm'}
-            info['params'][par]['ref']['loc']   = guess
-            info['params'][par]['ref']['scale'] = sig
-            info['params'][par]['proposal'] = proposal
+            #info['params'][par]['ref'] = {'dist': 'norm'}
+            #info['params'][par]['ref']['loc']   = guess
+            #info['params'][par]['ref']['scale'] = sig
+            #info['params'][par]['proposal'] = proposal
             info['params'][par]['latex'] = par
     else:
         info['params'][par] = {}
@@ -184,7 +184,7 @@ for par in param.output_derived:
         info['params'][par] = {}
         info['params'][par]['latex'] = par
 
-info["debug"] = True
+#info["debug"] = True
 updated_info, sampler = run(info)
 
 list_of_chains = comm.gather(sampler.products()["sample"].to_numpy(), root=0)

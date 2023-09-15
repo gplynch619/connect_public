@@ -90,7 +90,7 @@ class Sampling():
                                                                        f'N-{self.param.N}/training.log'))
             else:
                 model = self.param.initial_model
-            print(f'Initial model is {model}', flush=True)
+        print(f'Initial model is {model}', flush=True)
 
         kill_iteration = False
         while True:
@@ -102,7 +102,8 @@ class Sampling():
             N_acc = mcmc.get_number_of_accepted_steps(i)
             print(f'Number of accepted steps: {N_acc}', flush=True)
             if i == 1 and not self.param.keep_first_iteration:
-                N_keep = 5000
+                #N_keep = self.param.N_max_points 
+                N_keep = 5000 ### original
             else:
                 N_keep = self.param.N_max_points
             N_keep = mcmc.filter_chains(N_keep,i)
@@ -179,7 +180,8 @@ class Sampling():
 
     def train_neural_network(self, sampling='lhc', output_file=None):
         if sampling == 'lhc':
-            folder = ''
+            #folder = ''
+            folder = f'N-{self.param.N}'
         elif sampling == 'iterative':
             i = max([int(f.split('number_')[-1]) for f in os.listdir(os.path.join(self.CONNECT_PATH, self.data_path)) if f.startswith('number')])
             folder = f'number_{i}'

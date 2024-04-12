@@ -58,7 +58,8 @@ info = {'likelihood': {},
                                     'path':            os.path.join(CONNECT_PATH, 'mcmc_plugin/cobaya'),
                                     'python_path':     os.path.join(CONNECT_PATH, 'mcmc_plugin/cobaya'),
                                     'extra_args':      {'connect_model': model}
-                                }}}
+                                }},
+        "debug": True}
 
 
 for lkl in param.sampling_likelihoods:
@@ -152,15 +153,59 @@ for par,interval in param.parameters.items():
             info['params'][par] = {}
             info["params"][par]['prior'] = {'dist': 'logistic'}
             info["params"][par]['prior']["loc"] = param.control_point_priors[par]
-            #info['params'][par]['ref'] = {'dist': 'norm'}
-            #info['params'][par]['ref']['loc']   = guess
-            #info['params'][par]['ref']['scale'] = sig
+            info['params'][par]['ref'] = {'dist': 'norm'}
+            info['params'][par]['ref']['loc']   = 0.0
+            info['params'][par]['ref']['scale'] = 0.5
             #info['params'][par]['proposal'] = proposal
             info['params'][par]['latex'] = par
+    ###########################################
+    # Uncomment below to insert priors into sampling
+    ###########################################
+
+    
+    # elif par.startswith('H0'):
+    #     info['params'][par] = {}
+    #     info['params'][par]['prior'] = {'dist': 'norm'}
+    #     info['params'][par]['ref'] = {'dist': 'norm'}
+    #     info['params'][par]['prior']['loc'] = 82
+    #     info['params'][par]['prior']['scale'] = 3
+    #     info['params'][par]['ref']['loc']   = 82
+    #     info['params'][par]['ref']['scale'] = .3
+    #     info['params'][par]['proposal'] = proposal
+    #     info['params'][par]['latex'] = par
+    # elif par.startswith('omega_b'):
+    #     info['params'][par] = {}
+    #     info['params'][par]['prior'] = {'dist': 'norm'}
+    #     info['params'][par]['ref'] = {'dist': 'norm'}
+    #     info['params'][par]['prior']['loc'] = 0.02375
+    #     info['params'][par]['prior']['scale'] = .0075
+    #     info['params'][par]['ref']['loc']   = 0.0235
+    #     info['params'][par]['ref']['scale'] = .00005
+    #     info['params'][par]['proposal'] = proposal
+    #     info['params'][par]['latex'] = par
+    # elif par.startswith('omega_cdm'):
+    #     info['params'][par] = {}
+    #     info['params'][par]['prior'] = {'dist': 'norm'}
+    #     info['params'][par]['ref'] = {'dist': 'norm'}
+    #     info['params'][par]['prior']['loc'] = 0.125
+    #     info['params'][par]['prior']['scale'] = .005
+    #     info['params'][par]['ref']['loc']   = 0.125
+    #     info['params'][par]['ref']['scale'] = .0005
+    #     info['params'][par]['proposal'] = proposal
+    #     info['params'][par]['latex'] = par
+ 
+    elif par.startswith("qt_"):
+       info['params'][par] = {}
+       info['params'][par]['prior'] = {}
+       info['params'][par]['ref'] = 0.0
+       info['params'][par]['prior']['min'] = xmin
+       info['params'][par]['prior']['max'] = xmax
+       info['params'][par]['proposal'] = proposal
+       info['params'][par]['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}
-        info['params'][par]['ref'] = {'dist': 'norm'}
+        info['params'][par]['ref'] = {'dist': 'uniform'}
         info['params'][par]['prior']['min'] = xmin
         info['params'][par]['prior']['max'] = xmax
         info['params'][par]['ref']['loc']   = guess

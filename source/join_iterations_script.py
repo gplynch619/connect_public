@@ -3,7 +3,7 @@ from default_module import Parameters
 import os
 from tools import combine_sets_of_data_files
 
-CONNECT_PATH  = os.path.realpath(os.path.dirname(__file__))
+CONNECT_PATH  = "/home/gplynch/projects/connect_public"
 param_file    = sys.argv[1]
 old_data      = sys.argv[2]
 new_data      = sys.argv[3]
@@ -11,8 +11,8 @@ new_data      = sys.argv[3]
 param         = Parameters(param_file)
 
 path = CONNECT_PATH + f'/data/{param.jobname}/'
-old_data_path = sys.path.join(path, old_data)
-new_data_path = sys.path.join(path, new_data)
+old_data_path = os.path.join(path, old_data)
+new_data_path = os.path.join(path, new_data)
 
 combine_sets_of_data_files(os.path.join(new_data_path, 'model_params.txt'),
                                os.path.join(old_data_path, 'model_params.txt'))

@@ -2,10 +2,13 @@ import numpy as np
 from classy import Class
 from scipy.stats import qmc
 from scipy.interpolate import interp1d
+from scipy.special import logit
 import pickle as pkl
 import sys
 sys.path.insert(0, '/home/gplynch/projects/connect_public')
 import datetime
+sys.path.insert(0, "/home/gplynch/projects/emu_wrapper")
+from TrainedEmulator import *
 import os
 from default_module import Parameters
 from tools import get_computed_cls
@@ -133,7 +136,23 @@ if rank == 0:
 
 ## rank > 0 (slaves)
 else:
+    xe_fid_max=1.09258
     # Directories for input (model parameters) and output (Cl data) data
+    def inverse_pert_transformation(qt,xe_fid,xe_max=xe_fid_max):
+        shift = logit(xe_fid/xe_max)
+        res = logit( (qt+xe_fid)/xe_max ) - shift
+        if np.isnan(res):
+            print("NaN from qt {} xe_fid {}".format(qt, xe_fid))
+        if np.isinf(res):
+            print("inf from qt {} xe_fid {}".format(qt, xe_fid))
+        return res
+
+    if "xe_control_pivots" in param.extra_input.keys():
+        pivots = np.array([float(z) for z in param.extra_input["xe_control_pivots"].split(",")])
+    
+    if np.array([p.startswith("qt") for p in param.parameters.keys()]).any():
+        lcdm_emulator = TrainedEmulator("/home/gplynch/projects/connect_public/trained_models/lcdm_xe")
+
     in_dir           = os.path.join(directory, f'model_params_data/model_params_{rank}.txt')
     out_dirs_Cl      = []
     out_dirs_Pk      = []
@@ -248,26 +267,57 @@ else:
         for i, par_name in enumerate(param_names):
             if par_name.startswith("q_"):
                 continue
+            elif par_name.startswith("qt_"):
+                continue
             else:
                 params[par_name] = model[i]
         
+        if param.extra_input["xe_interp_type"]!="linear":
+            if np.array([p.startswith("qt") for p in param.parameters.keys()]).any():
+                cosmo_params = [params[p] for p in param_names if (not p.startswith("q") and not p.startswith("w0"))]
+                fid_xe = lcdm_emulator.get_predictions([cosmo_params])[0]
+                fid_xe_func = interp1d(lcdm_emulator.output_info["output_z_grids"]["x_e"], fid_xe)
+        value_error_flag = False
         try:
             if param.extra_input["xe_pert_type"]=="control":
                 model_cps = [0.0]
                 for i, par_name in enumerate(param_names):
                     if par_name.startswith("q_"):
                         model_cps.append(model[i])
+                    elif par_name.startswith("qt_"):
+                        if param.extra_input["xe_interp_type"]=="linear":
+                            model_cps.append(model[i])
+                        else:
+                            qid = int(par_name.split("_")[1])
+                            fid_xe_at_zi = fid_xe_func(pivots[qid])
+                            if model[i]<(-fid_xe_at_zi):
+                                model[i]=-0.999*fid_xe_at_zi
+                            elif model[i]>(xe_fid_max-fid_xe_at_zi):
+                                model[i]=0.999*(xe_fid_max-fid_xe_at_zi)
+                            qi = inverse_pert_transformation(model[i],fid_xe_at_zi)
+                            if np.isnan(qi):
+                                raise ValueError
+                            elif np.isinf(qi):
+                                raise ValueError
+                            model_cps.append(qi)
                 model_cps.append(0.0) # first and last control points fixed to zero 
-                string_cps = ["{:.4f}".format(c) for c in model_cps] #four decimal places
+                string_cps = ["{:.5e}".format(c) for c in model_cps] #8 decimal places
                 cp_string = ",".join(string_cps)
                 params["xe_control_points"] = cp_string
         except KeyError:
             continue
+        except ValueError:
+            value_error_flag = True
 
         try:
+            if value_error_flag:
+                raise ValueError
             cosmo = Class()
             cosmo.set(params)
-            cosmo.compute()
+            if len(param.output_Cl)==0:
+                cosmo.compute(level=["thermodynamics"])
+            else:
+                cosmo.compute()
             if len(param.output_bg) > 0:
                 bg = cosmo.get_background()
             if len(param.output_th) > 0:
@@ -288,7 +338,8 @@ else:
             if "g" in param.output_z:
                 th = cosmo.get_thermodynamics()
             success = True
-        except:
+        except Exception as e:
+            print(e.message)
             print('The following model failed in CLASS:', flush=True)
             print(params, flush=True)
             success = False

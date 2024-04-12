@@ -378,7 +378,8 @@ class Training():
         del output_tf
 
         ### Shuffle dataset and split in training, test and validation ###
-        dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
+        #dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
+        dataset = dataset.shuffle(buffer_size = dataset.cardinality())
         self.train_dataset = dataset.take(self.N_train)
         self.test_dataset  = dataset.skip(self.N_train).batch(self.param.batchsize)
         dataset = []

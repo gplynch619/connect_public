@@ -3,7 +3,7 @@ from default_module import Parameters
 import os
 from join_output import CreateSingleDataFile
 
-CONNECT_PATH  = os.path.realpath(os.path.dirname(__file__))
+CONNECT_PATH  = "/home/gplynch/projects/connect_public"
 param_file    = sys.argv[1]
 param         = Parameters(param_file)
 path = CONNECT_PATH + f'/data/{param.jobname}/'

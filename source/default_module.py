@@ -90,8 +90,8 @@ class Parameters():
             z = np.insert(z, 0, 0.0)
             grids["sigma8_z"] = z
         if "x_e" in self.output_z:
-            grids["x_e"] = np.linspace(700, 1700, 100)
+            grids["x_e"] = np.linspace(533.3333, 1600, 100)
         if "g" in self.output_z:
-            grids["g"] = np.linspace(600, 1500, 100)
+            grids["g"] = np.linspace(533.33333, 1600, 100)
         
         return grids

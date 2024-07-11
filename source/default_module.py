@@ -28,6 +28,8 @@ class Parameters():
                    'output_activation'    :  ( False                   ,  bool  ),
                    'extra_input'          :  ( {}                      ,  dict  ),
                    'output_Cl'            :  ( ['tt']                  ,  list  ),
+                   'output_unlensed_Cl'   :  ( []                      ,  list  ),
+                   'll_max_request'       :  ( None                    ,  int   ),
                    'output_Pk'            :  ( []                      ,  list  ),
                    'k_grid'               :  ( self.get_k_grid(param)  ,  list  ),
                    'z_Pk_list'            :  ( [0.0]                   ,  list  ),
@@ -50,7 +52,7 @@ class Parameters():
                    'keep_first_iteration' :  ( False                   ,  bool  ),
                    'mcmc_tol'             :  ( 0.01                    ,  float ),
                    'iter_tol'             :  ( 0.1                     ,  float ),
-                   'temperature'          :  ( 5.0                     ,  float ),
+                   'temperature'          :  ( [5.0]                     ,  list ),
                    'sampling_likelihoods' :  ( ['Planck_lite']         ,  list  ),
                    'extra_cobaya_lkls'    :  ( {}                      ,  dict  ),
                    }

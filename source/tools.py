@@ -5,14 +5,24 @@ import numpy as np
 
 CONNECT_PATH  = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
 
-def get_computed_cls(cosmo       # A computed CLASS model
-                 ):
+def get_computed_cls(cosmo,       # A computed CLASS model
+                 ll_max_request = None,
+                 lensed=True):
 
     # get parameters from CLASS model
     BA                 = cosmo.get_background()
     conformal_age_     = BA['conf. time [Mpc]'][-1]
     der_pars           = cosmo.get_current_derived_parameters(['ra_rec','tau_rec'])
-    cls                = cosmo.lensed_cl()
+    if ll_max_request is not None:
+        if lensed:
+            cls            = cosmo.lensed_cl(ll_max_request)
+        else:
+            cls            = cosmo.raw_cl(ll_max_request)
+    else:
+        if lensed:
+            cls            = cosmo.lensed_cl()
+        else:
+            cls            = cosmo.raw_cl()   
     l_max              = len(cls['ell']) - 1
     angular_rescaling_ = der_pars['ra_rec']/(conformal_age_ - der_pars['tau_rec'])
     l_linstep          = 40
@@ -79,6 +89,8 @@ def create_output_folders(param,            # Parameter object
                 os.mkdir(os.path.join(path, f'N-{param.N}/model_params_data'))
                 for output in param.output_Cl:
                     os.mkdir(os.path.join(path, f'N-{param.N}/Cl_{output}_data'))
+                for output in param.output_unlensed_Cl:
+                    os.mkdir(os.path.join(path, f'N-{param.N}/Cl_unlensed_{output}_data'))
                 for output in param.output_Pk:
                     os.mkdir(os.path.join(path, f'N-{param.N}/Pk_{output}_data'))
                 for output in param.output_bg:
@@ -104,6 +116,9 @@ def create_output_folders(param,            # Parameter object
             for output in param.output_Cl:
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/Cl_{output}_data')}")
                 os.mkdir(os.path.join(path, f'number_{iter_num}/Cl_{output}_data'))
+            for output in param.output_unlensed_Cl:
+                os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/Cl_unlensed_{output}_data')}")
+                os.mkdir(os.path.join(path, f'number_{iter_num}/Cl_unlensed_{output}_data'))
             for output in param.output_Pk:
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/Pk_{output}_data')}")
                 os.mkdir(os.path.join(path, f'number_{iter_num}/Pk_{output}_data'))

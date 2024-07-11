@@ -4,6 +4,11 @@ import time
 import itertools
 import pickle as pkl
 
+sys.path.insert(0, '/home/gplynch/projects/connect_public')
+import datetime
+sys.path.insert(0, "/home/gplynch/projects/emu_wrapper")
+from TrainedEmulator import *
+
 param_file   = sys.argv[1]
 CONNECT_PATH = sys.argv[2]
 sampling     = sys.argv[3]
@@ -11,7 +16,8 @@ sys.path.insert(0,CONNECT_PATH)
 
 import numpy as np
 import classy
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicSpline, interp1d
+from scipy.special import logit
 from mpi4py import MPI
 
 from source.default_module import Parameters
@@ -95,15 +101,36 @@ if rank == 0:
 
 ## rank > 0 (slaves)
 else:
+
+    xe_fid_max=1.09258
+    # Directories for input (model parameters) and output (Cl data) data
+    def inverse_pert_transformation(qt,xe_fid,xe_max=xe_fid_max):
+        shift = logit(xe_fid/xe_max)
+        res = logit( (qt+xe_fid)/xe_max ) - shift
+        if np.isnan(res):
+            print("NaN from qt {} xe_fid {}".format(qt, xe_fid))
+        if np.isinf(res):
+            print("inf from qt {} xe_fid {}".format(qt, xe_fid))
+        return res
+
+    if "xe_control_pivots" in param.extra_input.keys():
+        pivots = np.array([float(z) for z in param.extra_input["xe_control_pivots"].split(",")])
+    
+    if np.array([p.startswith("qt") for p in param.parameters.keys()]).any():
+        lcdm_emulator = TrainedEmulator("/home/gplynch/projects/connect_public/trained_models/lcdm_xe")
+
     # Directories for input (model parameters) and output (Cl data) data
     in_dir           = os.path.join(directory, f'model_params_data/model_params_{rank}.txt')
     out_dirs_Cl      = []
+    out_dirs_unlensed_Cl = []
     out_dirs_Pk      = []
     out_dirs_bg      = []
     out_dirs_th      = []
     out_dirs_ex      = []
     for Cl in param.output_Cl:
         out_dirs_Cl.append(os.path.join(directory, f'Cl_{Cl}_data/Cl_{Cl}_data_{rank}.txt'))
+    for Cl in param.output_unlensed_Cl:
+        out_dirs_unlensed_Cl.append(os.path.join(directory, f'Cl_unlensed_{Cl}_data/Cl_unlensed_{Cl}_data_{rank}.txt'))
     for Pk in param.output_Pk:
         out_dirs_Pk.append(os.path.join(directory, f'Pk_{Pk}_data/Pk_{Pk}_data_{rank}.txt'))
     for bg in param.output_bg:
@@ -160,8 +187,52 @@ else:
                 params['output']       += ',pCl'
 
         params.update(param.extra_input)
+ 
         for i, par_name in enumerate(param_names):
-            params[par_name] = model[i]
+            if par_name.startswith("q_"):
+                continue
+            elif par_name.startswith("qt_"):
+                continue
+            else:
+                params[par_name] = model[i]
+        if param.extra_input["xe_pert_type"]=="control":
+            if param.extra_input["xe_interp_type"]!="linear":
+                if np.array([p.startswith("qt") for p in param.parameters.keys()]).any():
+                    cosmo_params = [params[p] for p in param_names if (not p.startswith("q") and not p.startswith("w0"))]
+                    fid_xe = lcdm_emulator.get_predictions([cosmo_params])[0]
+                    fid_xe_func = interp1d(lcdm_emulator.output_info["output_z_grids"]["x_e"], fid_xe)
+        value_error_flag = False
+        try:
+            if param.extra_input["xe_pert_type"]=="control":
+                model_cps = [0.0]
+                for i, par_name in enumerate(param_names):
+                    if par_name.startswith("q_"):
+                        model_cps.append(model[i])
+                    elif par_name.startswith("qt_"):
+                        if param.extra_input["xe_interp_type"]=="linear":
+                            model_cps.append(model[i])
+                        else:
+                            qid = int(par_name.split("_")[1])
+                            fid_xe_at_zi = fid_xe_func(pivots[qid])
+                            if model[i]<(-fid_xe_at_zi):
+                                model[i]=-0.999*fid_xe_at_zi
+                            elif model[i]>(xe_fid_max-fid_xe_at_zi):
+                                model[i]=0.999*(xe_fid_max-fid_xe_at_zi)
+                            qi = inverse_pert_transformation(model[i],fid_xe_at_zi)
+                            if np.isnan(qi):
+                                raise ValueError
+                            elif np.isinf(qi):
+                                raise ValueError
+                            model_cps.append(qi)
+                model_cps.append(0.0) # first and last control points fixed to zero 
+                string_cps = ["{:.5e}".format(c) for c in model_cps] #8 decimal places
+                cp_string = ",".join(string_cps)
+                params["xe_control_points"] = cp_string
+        except KeyError:
+            continue
+        except ValueError:
+            value_error_flag = True
+
 
         if 'P_k_max_h/Mpc' in params:
             val = params.pop('P_k_max_h/Mpc')
@@ -181,6 +252,10 @@ else:
                 else:
                     params['output']    = 'mPk'
             if not 'P_k_max_1/Mpc' in params:
+                params['P_k_max_1/Mpc'] = 1.
+
+        if "effective_f_sigma8" in param.extra_output:
+                params['z_max_pk']          = max(param.z_bg_list)+.1
                 params['P_k_max_1/Mpc'] = 1.
 
         try:
@@ -207,8 +282,11 @@ else:
                 try:
                     cls = cosmo.lensed_cl_computed() # Only available in CLASS++
                 except:
-                    cls = get_computed_cls(cosmo)
+                    cls = get_computed_cls(cosmo, param.ll_max_request)
                 ell = cls['ell'][2:]
+            if len(param.output_unlensed_Cl) > 0:
+                unlensed_cls = get_computed_cls(cosmo, param.ll_max_request, lensed=False)
+                unlensed_ell = unlensed_cls['ell'][2:]
             if len(param.output_Pk) > 0:
                 pks = {}
                 for pk in param.output_Pk:
@@ -236,6 +314,20 @@ else:
                 with open(out_dir, 'a') as f:
                     for i, l in enumerate(ell):
                         if i != len(ell)-1:
+                            f.write(str(l)+'\t')
+                        else:
+                            f.write(str(l)+'\n')
+                    for i, p in enumerate(par_out):
+                        if i != len(par_out)-1:
+                            f.write(str(p)+'\t')
+                        else:
+                            f.write(str(p)+'\n')
+
+            for out_dir, output in zip(out_dirs_unlensed_Cl, param.output_unlensed_Cl):
+                par_out = unlensed_cls[output][2:]*unlensed_ell*(unlensed_ell+1)/(2*np.pi)
+                with open(out_dir, 'a') as f:
+                    for i, l in enumerate(unlensed_ell):
+                        if i != len(unlensed_ell)-1:
                             f.write(str(l)+'\t')
                         else:
                             f.write(str(l)+'\n')

@@ -2,13 +2,13 @@ import os
 import sys
 import pickle as pkl
 from pathlib import Path
-
 from cobaya.run import run
 from cobaya.log import LoggedError
 from mpi4py import MPI
 import numpy as np
-
+sys.path.insert(0, '/home/gplynch/projects/connect_public')
 from source.default_module import Parameters
+from scipy import stats
 
 model = sys.argv[1]
 iteration = sys.argv[2]
@@ -22,7 +22,8 @@ with open('mcmc_plugin/connect.conf','r') as f:
     for line in f:
         exec(line)
 
-path_clik = os.path.join(Path(path['clik']).parents[2], 'baseline/plc_3.0/')
+#path_clik = os.path.join(Path(path['clik']).parents[2], 'baseline/plc_3.0/')
+path_clik = path["planck_data"]
 CONNECT_PATH = Path(path['cosmo']).parents[0]
 
 directory = os.path.join(CONNECT_PATH, f'data/{param.jobname}/number_{iteration}/')
@@ -149,6 +150,29 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['latex'] = par
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
+    elif par.startswith('100*theta_star'):
+        info['params']['theta_s_100'] = {}
+        info['params']['theta_s_100']['prior'] = {}
+        info['params']['theta_s_100']['ref'] = {'dist': 'norm'}
+        info['params']['theta_s_100']['prior']['min'] = xmin
+        info['params']['theta_s_100']['prior']['max'] = xmax
+        info['params']['theta_s_100']['ref']['loc']   = guess
+        info['params']['theta_s_100']['ref']['scale'] = sig
+        info['params']['theta_s_100']['proposal'] = proposal
+        info['params']['theta_s_100']['latex'] = par
+        info['params']['theta_s_100']['drop'] = True
+        info['params']['100*theta_s'] = {}
+        info['params']['100*theta_s']['latex'] = par
+        info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
+        info['params']['100*theta_s']['derived'] = False
+    elif par.startswith("qt_"):
+       info['params'][par] = {}
+       info['params'][par]['prior'] = {}
+       info['params'][par]['ref'] = 0.0
+       info['params'][par]['prior']['min'] = xmin
+       info['params'][par]['prior']['max'] = xmax
+       info['params'][par]['proposal'] = proposal
+       info['params'][par]['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}
@@ -168,13 +192,32 @@ for par in param.output_derived:
     elif par == '100*theta_s':
         info['params']['theta_s_100'] = {}
         info['params']['theta_s_100']['latex'] = par
+    elif par == '100*theta_star':
+        info['params']['theta_s_100'] = {}
+        info['params']['theta_s_100']['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['latex'] = par
 
+if "w0_fld" in info["params"]:
+    if "wa_fld" in info["params"]:
+        wa_min = info["params"]["wa_fld"]["prior"]["min"]
+        w0_min = info["params"]["w0_fld"]["prior"]["min"]
+        sum_min = wa_min+w0_min
+        info["prior"] = {"w0_plus_wa_prior": 'lambda w0_fld, wa_fld: stats.uniform.logpdf(w0_fld+wa_fld, loc={}, scale = (-{}) )'.format(sum_min, sum_min)}
+        # ensures early radiation domination
 
+if rank==0:
+    try:
+        os.mkdir(directory+"chains")
+    except:
+        pass
 
-updated_info, sampler = run(info)
+updated_info, sampler = run(info, output=directory+f'chains/number_{iteration}')
+
+print("RANK {} DONE".format(rank))
+
+comm.Barrier()
 
 list_of_chains = comm.gather(sampler.products()["sample"].to_numpy(), root=0)
 
@@ -188,3 +231,5 @@ if rank == 0:
     with open(directory + 'cobaya_all_chains.pkl','wb') as f:
         pkl.dump(all_chains,f)
 
+MPI.Finalize()
+sys.exit(0)

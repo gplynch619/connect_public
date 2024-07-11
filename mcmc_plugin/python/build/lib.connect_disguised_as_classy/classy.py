@@ -11,7 +11,7 @@ import numpy as np
 FILE_PATH = os.path.realpath(os.path.dirname(__file__))
 CONNECT_PATH = Path(FILE_PATH).parents[3]
 
-p_backup = sys.path.pop(0)
+p_backup = [(i,sys.path.pop(i)) for i, p in enumerate(sys.path) if 'connect_disguised_as_classy' in p]
 m_backup = sys.modules.pop('classy')
 
 import classy as real_classy
@@ -71,6 +71,9 @@ class Class(real_classy.Class):
         if 'output_Cl' in self.info:
             self.output_Cl = self.info['output_Cl']
             self.ell_computed = self.info['ell']
+        if 'output_unlensed_Cl' in self.info:
+            self.output_unlensed_Cl = self.info['output_unlensed_Cl']
+            self.unlensed_ell_computed = self.info['unlensed_ell']
         if 'output_Pk' in self.info:
             self.output_Pk = self.info['output_Pk']
             self.k_grid = self.info['k_grid']
@@ -188,10 +191,43 @@ class Class(real_classy.Class):
 
         return out_dict
 
-
     def raw_cl(self, lmax=2500):
-        warnings.warn("Warning: Cls are lensed even though raw Cls were requested.")
-        return self.lensed_cl(lmax)
+        if not hasattr(self, 'output_predict'):
+            self.compute()
+
+        if lmax == -1:
+            try:
+                lmax = self.pars['l_max_scalars']
+            except:
+                lmax = 2508
+
+        spectra = ['tt','ee','bb','te','pp','tp']
+        out_dict = {}
+        ell = np.array(list(range(lmax+1)))
+        for output in self.output_unlensed_Cl:
+            lim0 = self.output_interval['unlensed_Cl'][output][0]
+            lim1 = self.output_interval['unlensed_Cl'][output][1]
+            Cl_computed = self.output_predict[lim0:lim1]
+            if output[0] == output[1]:
+                Cl_computed = Cl_computed.clip(min=0)
+                Cl_spline = CubicSpline(self.unlensed_ell_computed, Cl_computed, bc_type='natural', extrapolate=True)
+                Cl = Cl_spline(ell).clip(min=0)
+            else:
+                Cl_computed = Cl_computed
+                Cl_spline = CubicSpline(self.unlensed_ell_computed, Cl_computed, bc_type='natural', extrapolate=True)
+                Cl = Cl_spline(ell)
+            out_dict[output] = np.insert(Cl[1:]*2*np.pi/(ell[1:]*(ell[1:]+1)), 0, 0.0) # Convert back to Cl form
+
+        out_dict['ell'] = ell
+        null_out = np.ones(len(ell), dtype=np.float32) * 1e-15
+        for spec in np.setdiff1d(spectra, self.output_unlensed_Cl):
+            out_dict[spec] = null_out
+
+        return out_dict
+
+    #def raw_cl(self, lmax=2500):
+    #    warnings.warn("Warning: Cls are lensed even though raw Cls were requested.")
+    #    return self.lensed_cl(lmax)
 
 
     def T_cmb(self):
@@ -242,13 +278,14 @@ class Class(real_classy.Class):
             self.compute()
 
         if 'theta_s_100' in names:
-            names = [name if name != 'theta_s_100' else '100*theta_s' for name in names]
+            names = [name if name != 'theta_s_100' else '100*theta_star' for name in names]
 
         names = set(names)
         class_names = names - set(self.output_derived)
         names -= class_names
 
         if len(class_names) > 0:
+            print(class_names)
             warnings.warn("Warning: Derived parameter not emulated by CONNECT. CLASS is used instead.")
             pars_update={}
             level='thermodynamics'
@@ -310,7 +347,42 @@ class Class(real_classy.Class):
 
         return th_dict
     
+    def angular_distance(self, z):
+        if not hasattr(self, 'output_predict'):
+            self.compute()
 
+        z_bg = self.info["z_bg"]
+        DA = self.output_predict[self.output_interval['bg']["ang.diam.dist."][0]:
+                                      self.output_interval['bg']["ang.diam.dist."][1]]
+        out_DA = CubicSpline(z_bg, DA, bc_type='natural')(z)
+        return out_DA
 
+    def Hubble(self, z):
+        if not hasattr(self, 'output_predict'):
+            self.compute()
+
+        z_bg = self.info["z_bg"]
+        H = self.output_predict[self.output_interval['bg']['H [1/Mpc]'][0]:
+                                      self.output_interval['bg']['H [1/Mpc]'][1]]
+        out_H = CubicSpline(z_bg, H, bc_type='natural')(z)
+        return out_H
+
+    def effective_f_sigma8(self, z):
+        if not hasattr(self, 'output_predict'):
+            self.compute()
+
+        z_bg = self.info["z_bg"]
+        efs8 = self.output_predict[self.output_interval['extra']['effective_f_sigma8'][0]:
+                                      self.output_interval['extra']['effective_f_sigma8'][1]]
+        out_efs8 = CubicSpline(z_bg, efs8, bc_type='natural')(z)
+        return out_efs8
+
+    def rs_drag(self):
+        if not hasattr(self, 'output_predict'):
+            self.compute()
+        rsd = self.output_predict[self.output_interval['extra']['rs_drag'][0]:
+                                      self.output_interval['extra']['rs_drag'][1]]
+        return rsd
+        
 sys.path.insert(0, p_backup)
 sys.modules['classy'] = m_backup

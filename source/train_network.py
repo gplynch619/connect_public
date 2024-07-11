@@ -66,11 +66,34 @@ class Training():
                     else:
                         if i == 1:
                             ell_weights.append(ell)
-                        out.append(np.float32(line.replace('\n','').split('\t')))
-            outputs.append(out)
+                        li = np.float32(line.replace('\n','').split('\t'))
+                        if len(li)!=len(ell):
+                            np.append(li, li[-1])
+                        out.append(li)
+            outputs.append(np.array(out))
             output_interval['Cl'][output] = [output_size_iter, output_size_iter + len(out[0])]
             output_size_iter += len(out[0])
 
+        if len(self.param.output_unlensed_Cl) > 0:
+            output_interval['unlensed_Cl']  = {}
+        for output in self.param.output_unlensed_Cl:
+            out = []
+            with open(os.path.join(self.load_path, f'Cl_unlensed_{output}.txt'), 'r') as f:
+                for i, line in enumerate(f):
+                    if i == 0:
+                        unlensed_ell = np.int32(line.replace('\n','').split('\t'))
+                        if not hasattr(self, 'output_unlensed_ell'):
+                            self.output_unlensed_ell = unlensed_ell
+                    else:
+                        if i == 1:
+                            ell_weights.append(unlensed_ell)
+                        li = np.float32(line.replace('\n','').split('\t'))
+                        if len(li)!=len(ell):
+                            np.append(li, li[-1])
+                        out.append(li)
+            outputs.append(np.array(out))
+            output_interval['unlensed_Cl'][output] = [output_size_iter, output_size_iter + len(out[0])]
+            output_size_iter += len(out[0])
 
         if len(self.param.output_Pk) > 0:
             output_interval['Pk']  = {}
@@ -176,7 +199,6 @@ class Training():
             outputs.append(np.array(out))
             output_interval['extra'][output] = [output_size_iter, output_size_iter + len(out[0])]
             output_size_iter += len(out[0])
-
 
 
         self.output_dim = output_size_iter
@@ -319,6 +341,9 @@ class Training():
         if len(self.param.output_Cl) > 0:
             self.output_info['ell']       = list(self.output_ell)
             self.output_info['output_Cl'] = self.param.output_Cl
+        if len(self.param.output_unlensed_Cl) > 0:
+            self.output_info['ell']       = list(self.output_unlensed_ell)
+            self.output_info['output_unlensed_Cl'] = self.param.output_unlensed_Cl
         if len(self.param.output_Pk) > 0:
             self.output_info['k_grid']    = list(self.output_k_grid)
             self.output_info['output_Pk'] = self.param.output_Pk
@@ -351,7 +376,8 @@ class Training():
 
 
         ### Shuffle dataset and split in training, test and validation ###
-        dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
+        #dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
+        dataset = dataset.shuffle(buffer_size = dataset.cardinality())
         self.train_dataset = dataset.take(self.N_train)
         self.test_dataset  = dataset.skip(self.N_train).batch(self.param.batchsize)
         dataset = []

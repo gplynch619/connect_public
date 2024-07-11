@@ -36,13 +36,17 @@ class Sampling():
         exec(f'mcmc = {self.param.mcmc_sampler}(self.param, self.CONNECT_PATH)', locals(), _locals)
         mcmc = _locals['mcmc']
 
-        annealing = isinstance(self.param.temperature, list)
+        #annealing = isinstance(self.param.temperature, list)
+        if len(self.param.temperature)>1:
+            annealing=True 
+        else:
+            annealing=False
         if annealing:
             temp_len = len(self.param.temperature)
             temperature = self.param.temperature[0]
         else:
             temp_len = 0
-            temperature = self.param.temperature
+            temperature = self.param.temperature[0]
 
         mcmc.check_version()
         i_converged = 10000
@@ -55,18 +59,24 @@ class Sampling():
             if data_is_computed:
                 print('Resuming iterative sampling', flush=True)
                 print(f'Retraining neural network from iteration {i}', flush=True)
+                model = self.param.initial_model
+                i-=1
             else:
                 i -= 1
                 if i==0:
-                    raise NotImplementedError('You do not have any computed iterations to resume from. Please run again without resume_iterations=True')
+                    os.system(f"rm -rf {self.data_path}/number_{i+1}")
+                    model = self.train_neural_network(sampling='lhc',
+                                              output_file=os.path.join(self.data_path, 
+                                                                       f'N-{self.param.N}/training.log'))
+                    #raise NotImplementedError('You do not have any computed iterations to resume from. Please run again without resume_iterations=True')
                 else:
                     os.system(f"rm -rf {self.data_path}/number_{i+1}")
                     print('Resuming iterative sampling', flush=True)
                     print(f'Retraining neural network from iteration {i}', flush=True)
+                    model = self.train_neural_network(sampling='iterative',
+                                                    output_file=os.path.join(self.data_path,
+                                                                            f'number_{i}/training.log'))
 
-            model = self.train_neural_network(sampling='iterative',
-                                              output_file=os.path.join(self.data_path,
-                                                                       f'number_{i}/training.log'))
             if not os.path.isdir(os.path.join(self.data_path, 'compare_iterations')):
                 os.system(f"mkdir {self.data_path}/compare_iterations")
                 mcmc.Gelman_Rubin_log_ini()
@@ -99,6 +109,7 @@ class Sampling():
             print(f'Initial model is {model}', flush=True)
 
         kill_iteration = False
+        do_initial_mcmc_run = True #False if the mcmc has already been done, and we are picking up after (due to an aborted run)
         while True:
             if i > i_converged and annealing:
                 temperature = self.param.temperature[i-i_converged]
@@ -106,9 +117,13 @@ class Sampling():
             print(f'Temperature is now {temperature}', flush=True)
             print(f'Running MCMC sampling no. {i}...', flush=True)
             mcmc.temperature = temperature
-            mcmc.run_mcmc_sampling(model, i)
-            print(f'MCMC sampling stopped since R-1 less than {self.param.mcmc_tol} has been reached.', flush=True)
-
+            
+            if do_initial_mcmc_run:
+                mcmc.run_mcmc_sampling(model, i)
+                print(f'MCMC sampling stopped since R-1 less than {self.param.mcmc_tol} has been reached.', flush=True)
+            else:
+                do_initial_mcmc_run = True
+            
             N_acc = mcmc.get_number_of_accepted_steps(i)
             print(f'Number of accepted steps: {N_acc}', flush=True)
             if i == 1 and not self.param.keep_first_iteration:
@@ -184,11 +199,13 @@ class Sampling():
         os.environ["export OMP_NUM_THREADS"] = str({self.N_cpus_per_task})
         os.environ["PMIX_MCA_gds"] = "hash"
         sp.Popen(f"mpirun -np {self.N_tasks - 1} python {self.CONNECT_PATH}/source/calc_models_mpi.py {self.param.param_file} {self.CONNECT_PATH} {sampling}".split()).wait()
+        #sp.Popen(f"mpirun -np {self.N_tasks - 1} valgrind --leak-check=full --show-reachable=yes --trace-children=yes --log-file=jobscripts/nc.vg.%p python {self.CONNECT_PATH}/source/calc_models_mpi.py {self.param.param_file} {self.CONNECT_PATH} {sampling}".split()).wait()
+
         os.environ["export OMP_NUM_THREADS"] = "1"
 
     def train_neural_network(self, sampling='lhc', output_file=None):
         if sampling == 'lhc':
-            folder = ''
+            folder = f'N-{self.param.N}'
         elif sampling == 'iterative':
             i = max([int(f.split('number_')[-1]) for f in os.listdir(os.path.join(self.CONNECT_PATH, self.data_path)) if f.startswith('number')])
             folder = f'number_{i}'

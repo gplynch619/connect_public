@@ -28,7 +28,8 @@ class CreateSingleDataFile():
                             counts.append(list(f)[0].count('\t'))
                         except:
                             pass
-            self.Cl_len = max(set(counts), key = counts.count) + 1
+            #self.Cl_len = max(set(counts), key = counts.count) + 1
+            self.Cl_len = max(set(counts)) + 1
 
             files = sorted(os.listdir(os.path.join(self.path, f'Cl_{Cl_out_1}_data')))
             i = 0
@@ -38,10 +39,37 @@ class CreateSingleDataFile():
                         f_list = list(f)
                         for j, f_line in enumerate(f_list):
                             if f_line.count('\t')+1 == self.Cl_len and j%2 == 0:
-                                self.ell_common = f_list[0]
+                                #self.ell_common = f_list[0]
+                                self.ell_common = f_line
                                 break
                 i += 1
-        
+
+        if len(self.param.output_unlensed_Cl) > 0:
+            self.unlensed_ell_common = False
+            counts = []
+            Cl_out_1 = self.param.output_unlensed_Cl[0]
+            for filename in sorted(os.listdir(os.path.join(self.path, f'Cl_unlensed_{Cl_out_1}_data'))):
+                if filename.endswith('.txt'):
+                    with open(os.path.join(self.path, f'Cl_unlensed_{Cl_out_1}_data', filename),'r') as f:
+                        try:
+                            counts.append(list(f)[0].count('\t'))
+                        except:
+                            pass
+            #self.Cl_len = max(set(counts), key = counts.count) + 1
+            self.unlensed_Cl_len = max(set(counts)) + 1
+
+            files = sorted(os.listdir(os.path.join(self.path, f'Cl_unlensed_{Cl_out_1}_data')))
+            i = 0
+            while not self.unlensed_ell_common:
+                if files[i].endswith('.txt'):
+                    with open(os.path.join(self.path, f'Cl_unlensed_{Cl_out_1}_data', files[i]),'r') as f:
+                        f_list = list(f)
+                        for j, f_line in enumerate(f_list):
+                            if f_line.count('\t')+1 == self.unlensed_Cl_len and j%2 == 0:
+                                #self.ell_common = f_list[0]
+                                self.unlensed_ell_common = f_line
+                                break
+                i += 1
 
     def join(self):
         
@@ -64,6 +92,31 @@ class CreateSingleDataFile():
                                         Cl_old  = np.float32(line.replace('\n','').split('\t'))
                                         Cl_sp_fun = CubicSpline(ell, Cl_old, bc_type='natural', extrapolate=True)
                                         Cl_sp = Cl_sp_fun(np.int32(self.ell_common.replace('\n','').split('\t')))
+                                        for i, c in enumerate(Cl_sp):
+                                            if i != len(Cl_sp)-1:
+                                                f.write(str(c)+'\t')
+                                            else:
+                                                f.write(str(c)+'\n')
+
+        for output in self.param.output_unlensed_Cl:
+            unlensed_Cl_header = True
+            with open(os.path.join(self.path, f'Cl_unlensed_{output}.txt'),'w') as f:
+                for filename in sorted(os.listdir(os.path.join(self.path, f'Cl_unlensed_{output}_data'))):
+                    if filename.endswith('.txt'):
+                        with open(os.path.join(self.path, f'Cl_unlensed_{output}_data', filename),'r') as g:
+                            g_list = list(g)
+                            if unlensed_Cl_header:
+                                f.write(self.unlensed_ell_common)
+                                unlensed_Cl_header = False
+                            for i, line in enumerate(g_list):
+                                if i%2 == 1:
+                                    if line.count('\t') + 1 == self.unlensed_Cl_len:
+                                        f.write(line)
+                                    else:
+                                        ell = np.int32(g_list[i-1].replace('\n','').split('\t'))
+                                        Cl_old  = np.float32(line.replace('\n','').split('\t'))
+                                        Cl_sp_fun = CubicSpline(ell, Cl_old, bc_type='natural', extrapolate=True)
+                                        Cl_sp = Cl_sp_fun(np.int32(self.unlensed_ell_common.replace('\n','').split('\t')))
                                         for i, c in enumerate(Cl_sp):
                                             if i != len(Cl_sp)-1:
                                                 f.write(str(c)+'\t')
@@ -150,5 +203,5 @@ class CreateSingleDataFile():
                             elif line[0] != '#':
                                 f.write(line)
 
-        for folder in [f for f in os.listdir(self.path) if f.endswith('_data')]:
-            shutil.rmtree(f'{self.path}/{folder}')
+        #for folder in [f for f in os.listdir(self.path) if f.endswith('_data')]:
+        #    shutil.rmtree(f'{self.path}/{folder}')

@@ -198,6 +198,9 @@ def combine_iterations_data(param,             # Parameter object
     for output in param.output_Cl:
         combine_sets_of_data_files(os.path.join(path_i, f'Cl_{output}.txt'),
                                    os.path.join(path_j, f'Cl_{output}.txt'))
+    for output in param.output_unlensed_Cl:
+        combine_sets_of_data_files(os.path.join(path_i, f'Cl_unlensed_{output}.txt'),
+                                   os.path.join(path_j, f'Cl_unlensed_{output}.txt'))
     for output in param.output_Pk:
         combine_sets_of_data_files(os.path.join(path_i, f'Pk_{output}.txt'),
                                    os.path.join(path_j, f'Pk_{output}.txt'), Pk=True)

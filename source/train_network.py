@@ -342,7 +342,7 @@ class Training():
             self.output_info['ell']       = list(self.output_ell)
             self.output_info['output_Cl'] = self.param.output_Cl
         if len(self.param.output_unlensed_Cl) > 0:
-            self.output_info['ell']       = list(self.output_unlensed_ell)
+            self.output_info['unlensed_ell']       = list(self.output_unlensed_ell)
             self.output_info['output_unlensed_Cl'] = self.param.output_unlensed_Cl
         if len(self.param.output_Pk) > 0:
             self.output_info['k_grid']    = list(self.output_k_grid)

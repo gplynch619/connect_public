@@ -161,7 +161,7 @@ else:
     with open(in_dir, 'w') as f:
         f.write(param_header)
 
-    for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_bg + out_dirs_th:
+    for out_dir in out_dirs_Cl + out_dirs_unlensed_Cl + out_dirs_Pk + out_dirs_bg + out_dirs_th:
         with open(out_dir, 'w') as f:
             f.write('')
     try:

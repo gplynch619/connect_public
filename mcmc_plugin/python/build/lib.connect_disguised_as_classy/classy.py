@@ -21,8 +21,10 @@ from classy import CosmoSevereError, CosmoComputationError
 class Class(real_classy.Class):
     def __init__(self, input_parameters={}, model_name=None):
         self.model = None
+        #print("INPUT PARAMS {}".format(input_parameters))
         try:
             self.model_name = input_parameters.pop('connect_model')
+            #print("MODEL NAME {}".format(self.model_name))
         except:
             pass
         super(Class, self).__init__()
@@ -41,10 +43,13 @@ class Class(real_classy.Class):
     def model_name(self, new_name):
         if self.model == None:
             self._model_name = new_name
+            #print("LOADING MODEL")
             self.load_model(model_name=new_name)
 
 
     def load_model(self, model_name=None):
+        #print("IN LOAD MODEL")
+
         if not model_name == None:
             name = model_name
         else:
@@ -52,6 +57,7 @@ class Class(real_classy.Class):
                 raise NameError('No model was specified - Set the attribute model_name to the name of a trained CONNECT model')
             else:
                 name = self.model_name
+
         try:
             try:
                 self.model = tf.keras.models.load_model(os.path.join(CONNECT_PATH,'trained_models',name), compile=False)
@@ -59,21 +65,19 @@ class Class(real_classy.Class):
                 self.model = tf.keras.models.load_model(name, compile=False)
         except:
             raise NameError(f"No trained model by the name of '{name}'")
-
         try:
             self.info = eval(self.model.get_raw_info().numpy().decode('utf-8'))
         except:
             with open(os.path.join(CONNECT_PATH,'trained_models',name,'output_info.pkl'), 'rb') as f:
                 self.info = pkl.load(f)
             warnings.warn("Loading info dictionary from output_info.pkl is deprecated and will not be supported in the next update.")
-
         self.param_names = self.info['input_names']
         if 'output_Cl' in self.info:
             self.output_Cl = self.info['output_Cl']
             self.ell_computed = self.info['ell']
         if 'output_unlensed_Cl' in self.info:
             self.output_unlensed_Cl = self.info['output_unlensed_Cl']
-            self.unlensed_ell_computed = self.info['unlensed_ell']
+            self.unlensed_ell_computed = self.info['unlensed_ell'] ########## NO UNLENSED ELL??
         if 'output_Pk' in self.info:
             self.output_Pk = self.info['output_Pk']
             self.k_grid = self.info['k_grid']
@@ -87,6 +91,7 @@ class Class(real_classy.Class):
             self.output_derived = self.info['output_derived']
         if 'extra_output' in self.info:
             self.extra_output = self.info['extra_output']
+
         self.output_interval = self.info['interval']
         if 'normalize' in self.info:
             raise RuntimeError('Unnormalising the output from models is deprecated. Models now output the correct values instead of normalised values.')
@@ -166,10 +171,12 @@ class Class(real_classy.Class):
                 lmax = self.pars['l_max_scalars']
             except:
                 lmax = 2508
-
+        #print("MODL {}".format(self.model_name))
         spectra = ['tt','ee','bb','te','pp','tp']
         out_dict = {}
         ell = np.array(list(range(lmax+1)))
+        #print("lensed cl {}".format(self.info))
+        #print("DICT {}".format(self.__dict__))
         for output in self.output_Cl:
             lim0 = self.output_interval['Cl'][output][0]
             lim1 = self.output_interval['Cl'][output][1]

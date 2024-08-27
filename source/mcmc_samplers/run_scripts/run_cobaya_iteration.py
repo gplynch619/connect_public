@@ -24,8 +24,9 @@ with open('mcmc_plugin/connect.conf','r') as f:
 
 #path_clik = os.path.join(Path(path['clik']).parents[2], 'baseline/plc_3.0/')
 path_clik = path["planck_data"]
-CONNECT_PATH = Path(path['cosmo']).parents[0]
 
+
+CONNECT_PATH = Path(path['cosmo']).parents[0]
 directory = os.path.join(CONNECT_PATH, f'data/{param.jobname}/number_{iteration}/')
 
 comm = MPI.COMM_WORLD
@@ -43,23 +44,36 @@ lkls = {'Planck_highl_TTTEEE_lite': {'name': 'planck_2018_highl_plik.TTTEEE_lite
         'Planck_lowl_EE':           {'name': 'planck_2018_lowl.EE_clik',
                                      'clik': os.path.join(path_clik, 'low_l/simall')}}
 
+if param.jobname=="modrec_unlensed":
+    covmat_name = "/home/gplynch/projects/cobaya/data/modrec_ex_planck_4/chains/modrec_ex_planck_4.covmat"
+else:
+    covmat_name = "auto"
 
+#covmat_name = "auto"
+
+if param.initial_model is not None:
+    if param.initial_model.startswith("modrec_extended"):
+        cosmo_connect_path = "/home/gplynch/back_files/connect_public/"
+    else:
+        cosmo_connect_path = CONNECT_PATH
+else:
+    cosmo_connect_path = CONNECT_PATH
 
 info = {'likelihood': {},
         'params': {},
         'sampler': {'mcmc': {'Rminus1_cl_stop':  0.1,
                              'Rminus1_stop':     param.mcmc_tol,
                              'max_tries':        1e+5,
-                             'covmat':          'auto',
+                             'covmat':          covmat_name,
                              'oversample_power': 0,
                              'proposal_scale':   2.1,
                              'temperature':      temperature}},
         'theory': {'CosmoConnect': {'ignore_obsolete': True,
-                                    'path':            os.path.join(CONNECT_PATH, 'mcmc_plugin/cobaya'),
-                                    'python_path':     os.path.join(CONNECT_PATH, 'mcmc_plugin/cobaya'),
+                                    'path':            os.path.join(cosmo_connect_path, 'mcmc_plugin/cobaya'),
+                                    'python_path':     os.path.join(cosmo_connect_path, 'mcmc_plugin/cobaya'),
                                     'extra_args':      {'connect_model': model}
-                                }}}
-
+                                }},
+        'debug': False}
 
 for lkl in param.sampling_likelihoods:
     if lkl == 'Planck_lite':
@@ -82,8 +96,6 @@ for lkl in param.sampling_likelihoods:
 
 for name, item in param.extra_cobaya_lkls.items():
     info['likelihood'][name] = item
-
-print(info['likelihood'])
 
 for par,interval in param.parameters.items():
     if par in param.prior_ranges:
@@ -131,7 +143,7 @@ for par,interval in param.parameters.items():
         info['params']['logA']['ref']['scale'] = sig
         info['params']['logA']['proposal'] = proposal
         info['params']['logA']['latex'] = par
-        info['params']['logA']['drop'] = True
+        #=info['params']['logA']['drop'] = True
         info['params']['A_s'] = {}
         info['params']['A_s']['latex'] = 'A_s'
         info['params']['A_s']['value'] = 'lambda logA: 1e-10*np.exp(logA)'
@@ -166,13 +178,13 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
     elif par.startswith("qt_"):
-       info['params'][par] = {}
-       info['params'][par]['prior'] = {}
-       info['params'][par]['ref'] = 0.0
-       info['params'][par]['prior']['min'] = xmin
-       info['params'][par]['prior']['max'] = xmax
-       info['params'][par]['proposal'] = proposal
-       info['params'][par]['latex'] = par
+        info['params'][par] = {}
+        info['params'][par]['prior'] = {}
+        info['params'][par]['ref'] = 0.0
+        info['params'][par]['prior']['min'] = xmin
+        info['params'][par]['prior']['max'] = xmax
+        info['params'][par]['proposal'] = proposal
+        info['params'][par]['latex'] = par
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}

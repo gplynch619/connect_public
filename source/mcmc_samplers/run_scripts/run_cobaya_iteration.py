@@ -1,3 +1,5 @@
+import sys
+sys.path.insert(0, '/home/gplynch/projects/connect_public')
 import os
 import sys
 import pickle as pkl
@@ -5,10 +7,10 @@ from pathlib import Path
 
 from cobaya.run import run
 from cobaya.log import LoggedError
+from source.default_module import Parameters
 from mpi4py import MPI
 import numpy as np
 
-from source.default_module import Parameters
 
 model = sys.argv[1]
 iteration = sys.argv[2]
@@ -32,8 +34,6 @@ rank = comm.Get_rank()
 
 sys.stdout = open(directory + 'cobaya.log','a+')
 sys.stderr = sys.stdout
-
-
 
 lkls = {'Planck_highl_TTTEEE_lite': {'name': 'planck_2018_highl_plik.TTTEEE_lite',
                                      'clik': os.path.join(path_clik, 'hi_l/plik_lite')},
@@ -74,8 +74,8 @@ for lkl in param.sampling_likelihoods:
             elif 'TT' in lkl and name.endswith('.clik'):
                 clik_file = os.path.join(lkls[lkl]['clik'], name)
                 break
-        info['likelihood'][lkls[lkl]['name']] = {'clik_file':   clik_file}
-
+        info['likelihood'][lkls[lkl]['name']] = {'clik_file':   clik_file,
+                                                 'python_path': lkls[lkl]['path']}
     else:
         raise NotImplementedError(f"For now, only the following three likelihoods are available during training:\n{' '*4}Planck_highl_TTTEEE_lit, Planck_lowl_TT, Planck_lowl_EE\nYou can manually add extra likelihoods as a nested dictionary using Cobaya syntax in the parameter file, e.g.\n{' '*4}"+"extra_cobaya_lkls = {'Likelihood_name': {'path': path/to/likelihood,\n"+f"{' '*52}'options': other_options,\n{' '*52}"+"...},\n"+f"{' '*44}"+"...}")
 
@@ -149,6 +149,10 @@ for par,interval in param.parameters.items():
         info['params']['100*theta_s']['latex'] = par
         info['params']['100*theta_s']['value'] = 'lambda theta_s_100: theta_s_100'
         info['params']['100*theta_s']['derived'] = False
+    elif par.startswith('100*theta_star'):
+        info['params']['theta_star_100'] = {}
+        info['params']['theta_star_100']['latex'] = par
+        info['params']['theta_star_100']['value'] = 'lambda 100*theta_star: 100*theta_star'
     else:
         info['params'][par] = {}
         info['params'][par]['prior'] = {}
@@ -159,6 +163,7 @@ for par,interval in param.parameters.items():
         info['params'][par]['ref']['scale'] = sig
         info['params'][par]['proposal'] = proposal
         info['params'][par]['latex'] = par
+
 
 for par in param.output_derived:
     if par == 'A_s' and 'ln10^{10}A_s' in param.parameters:
@@ -171,8 +176,6 @@ for par in param.output_derived:
     else:
         info['params'][par] = {}
         info['params'][par]['latex'] = par
-
-
 
 updated_info, sampler = run(info)
 
@@ -188,3 +191,5 @@ if rank == 0:
     with open(directory + 'cobaya_all_chains.pkl','wb') as f:
         pkl.dump(all_chains,f)
 
+MPI.Finalize()
+sys.exit(0)

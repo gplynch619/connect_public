@@ -32,11 +32,13 @@ if sampling == 'iterative':
         directory = os.path.join(path, f'N-{param.N}')
 elif sampling in ['lhc','hypersphere','pickle']:
     directory = os.path.join(path, f'N-{param.N}')
+elif sampling == "recompute":
+    directory = os.path.join(path, "number_0")
+    model_progress_file = os.path.join(directory, "model_progress.txt")
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 N_slaves = comm.Get_size()-1
-
 get_slave = itertools.cycle(range(1,N_slaves+1))
 
 def excepthook(etype, value, tb):
@@ -63,7 +65,8 @@ if len(param.output_Cl) > 0:
 ## rank == 0 (master)
 if rank == 0:
     if sampling == 'iterative':
-        exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        #exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        exec(f'from mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
         _locals = {}
         exec(f'mcmc = {param.mcmc_sampler}(param, CONNECT_PATH)', locals(), _locals)
         mcmc = _locals['mcmc']
@@ -97,8 +100,13 @@ if rank == 0:
     while len(data) > data_idx:
         r = next(get_slave)
         if comm.iprobe(r):
-            useless_info = comm.recv(source=r)
-            comm.send(data[data_idx], dest=r)
+            last_model_id = int(comm.recv(source=r))
+            model = np.insert(data[data_idx], 0, data_idx)
+            comm.send(model, dest=r)
+            if sampling=="recompute":
+                if last_model_id!=-1:
+                    with open(model_progress_file, "a") as f:
+                        f.write(f"{remaining_idx[last_model_id]}\n")
             data_idx += 1
             sleep_dict[r] = 1
         else:
@@ -120,6 +128,7 @@ else:
     in_dir           = os.path.join(directory, f'model_params_data/model_params_{rank}.txt')
     out_dirs_Cl      = []
     out_dirs_Pk      = []
+    out_dirs_z       = []
     out_dirs_bg      = []
     out_dirs_th      = []
     out_dirs_ex      = []
@@ -155,9 +164,10 @@ else:
     with open(in_dir, 'w') as f:
         f.write(param_header)
 
-    for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_bg + out_dirs_th:
-        with open(out_dir, 'w') as f:
-            f.write('')
+    for out_dir in out_dirs_Cl + out_dirs_Pk + out_dirs_z + out_dirs_bg + out_dirs_th:
+        if not os.path.exists(out_dir):
+            with open(out_dir, 'w') as f:
+                f.write('')
     try:
         with open(out_dir_derived, 'w') as f:
             f.write(derived_header)
@@ -171,12 +181,14 @@ else:
     
 
     # Iterate over each model
+    last_model_idx = -1
     while True:
-        comm.send('I am done', dest=0)
+        comm.send(last_model_idx, dest=0)
         model = comm.recv(source=0)
         if type(model).__name__ == 'str':
             break
-
+        last_model_idx = model[0]
+        model = model[1:]
         # Set required CLASS parameters
         params = {}
         if len(param.output_Cl) > 0:
@@ -296,6 +308,33 @@ else:
                             else:
                                 f.write(str(p)+'\n')
 
+            for out_dir, output in zip(out_dirs_z, param.output_z):
+                zgrid = param.output_z_grids[output]
+                if output=="H":
+                    par_out = np.array([cosmo.Hubble(z) for z in zgrid])
+                if output=="DA":
+                    par_out = np.array([cosmo.angular_distance(z)*(1+z) for z in zgrid])
+                if output=="sigma8":
+                    h = cosmo.get_current_derived_parameters(["h"])["h"]
+                    par_out = np.array([cosmo.sigma(8./h, z) for z in zgrid])
+                if output=="x_e":
+                    xe_func = interp1d(th["z"], th["x_e"])
+                    par_out = xe_func(zgrid)
+                if output=="g":
+                    g_func = interp1d(th["z"], th["kappa' [Mpc^-1]"]*th["exp(-kappa)"])
+                    par_out = g_func(zgrid)
+                with open(out_dir, 'a') as f:
+                    for i, z in enumerate(zgrid):
+                        if i != len(zgrid)-1:
+                            f.write(str(z)+'\t')
+                        else:
+                            f.write(str(z)+'\n')
+                    for i, p in enumerate(par_out):
+                        if i != len(par_out)-1:
+                            f.write(str(p)+'\t')
+                        else:
+                            f.write(str(p)+'\n')
+
             if len(param.output_derived) > 0:
                 par_out = []
                 for output in param.output_derived:
@@ -360,8 +399,13 @@ else:
                         f.write(str(m)+'\t')
                     else:
                         f.write(str(m)+'\n')
-
+        else:
+            nfailed[0]+=1
         cosmo.struct_cleanup()
 
+comm.Reduce(nfailed, total_failed, MPI.SUM, 0)
+if(rank==0):
+    print("{0}/{1} models succeeded".format(len(data)-total_failed[0], len(data)))
+comm.Barrier()
 MPI.Finalize()
 sys.exit(0)

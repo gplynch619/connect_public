@@ -27,6 +27,10 @@ class Sampling():
         self.copy_param_file()
         self.call_calc_models(sampling='hypersphere')
 
+    def create_hypersphere_data(self):
+        self.copy_param_file()
+        self.call_calc_models(sampling='hypersphere')
+
     def create_lhc_data(self):
         self.copy_param_file()
         self.call_calc_models(sampling='lhc')
@@ -168,6 +172,18 @@ class Sampling():
                 print(f"New model is {model}", flush=True)
                 i += 1
 
+    def create_list_data(self):
+        print(f'\n\nBeginning data recompute', flush=True)
+        print(f'Using settings from {self.param_file}', flush=True)
+        print(f'Using input model list {self.param.input_model_file}', flush=True)
+
+        self.call_calc_models(sampling="recompute")
+        print(f'Computations finished', flush=True)
+
+        tools.join_data_files(self.param)
+        print(f'Recompute finished. Change sampling type to iterative and re-run the same parameter file.', flush=True)
+        return 
+
     def copy_param_file(self):
         os.system(f"cp {self.CONNECT_PATH+'/'+self.param_file} {self.CONNECT_PATH+'/'+self.data_path+'/log_connect.param'}") 
         with open(self.CONNECT_PATH+'/'+self.data_path+'/log_connect.param', 'a+') as f:
@@ -202,7 +218,6 @@ class Sampling():
         tr.save_model()
         tr.save_history()
         tr.save_test_data()
-
         if self.param.save_name != None:
             model_name = self.param.save_name
         else:

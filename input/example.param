@@ -16,8 +16,6 @@ parameters={'omega_b'        :  [ 0.014,          0.039          ],
 # Specify additional parameters
 
 
-
-
 #########--------- Training parameters ---------#########
 
 train_ratio          = 0.95		  # Amount of data used for training

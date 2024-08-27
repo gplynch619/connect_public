@@ -94,6 +94,12 @@ if keyword == 'create':
             from source.tools import join_data_files
             join_data_files(param)
 
+    elif param.sampling == "recompute":
+        with open(path+'output.log', 'w') as sys.stdout:
+            print(log_string, flush=True)
+            print('Sampling method    :  Recomputing', flush=True)
+            print('\n'+'-'*62+'\n', flush=True)
+            s.create_list_data()
 
 #####################################
 # _____________ train _____________ #

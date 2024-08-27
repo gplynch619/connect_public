@@ -2,6 +2,7 @@ import sys
 import os
 import numpy as np
 from pathlib import Path
+from importlib.machinery import SourceFileLoader
 
 from cobaya.theories.classy import classy
 from cobaya.component import ComponentNotInstalledError, load_external_module
@@ -11,8 +12,9 @@ class CosmoConnect(classy):
     def initialize(self):
         """Importing CONNECT from the correct path."""
         classy_path = Path(self.path).parents[0]
+        connect = SourceFileLoader("classy", os.path.join(self.get_import_path(classy_path), "classy.py")).load_module()
         #sys.path.insert(0, self.get_import_path(classy_path))
-        sys.path.insert(1, self.get_import_path(classy_path))
+        #sys.path.insert(1, self.get_import_path(classy_path))
         import classy as connect
         self.classy_module = connect
         self.classy = self.classy_module.Class()

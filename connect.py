@@ -50,7 +50,7 @@ if keyword == 'create':
 
     if not os.path.isdir(path):
         os.mkdir(path)
-    with open(os.path.join(CONNECT_PATH,'source/logo_colour.txt'),'r') as f:
+    with open(os.path.join(CONNECT_PATH,'source/assets/logo_colour.txt'),'r') as f:
         log_string = '-'*62+'\n\n\n' +                        \
                      f.read()+'\n' +                          \
                      '-'*62+'\n\n' +                          \
@@ -76,6 +76,30 @@ if keyword == 'create':
             from source.tools import join_data_files
             join_data_files(param)
 
+    elif param.sampling == 'hypersphere':
+        with open(path+f'N-{param.N}/output.log', mode) as sys.stdout:
+            print(log_string, flush=True)
+            print('Sampling method    :  Hypersphere', flush=True)
+            print('\n'+'-'*62+'\n', flush=True)
+            s.create_hypersphere_data()
+            from source.tools import join_data_files
+            join_data_files(param)
+
+    elif param.sampling == 'pickle':
+        with open(path+f'N-{param.N}/output.log', mode) as sys.stdout:
+            print(log_string, flush=True)
+            print('Sampling method    :  From Pickle file', flush=True)
+            print('\n'+'-'*62+'\n', flush=True)
+            s.create_pickle_data()
+            from source.tools import join_data_files
+            join_data_files(param)
+
+    elif param.sampling == "recompute":
+        with open(path+'output.log', 'w') as sys.stdout:
+            print(log_string, flush=True)
+            print('Sampling method    :  Recomputing', flush=True)
+            print('\n'+'-'*62+'\n', flush=True)
+            s.create_list_data()
 
 #####################################
 # _____________ train _____________ #
@@ -112,5 +136,16 @@ if keyword == 'train':
 #####################################
 
 if keyword == 'animate':
-    from source.animate import play
+    from source.assets.animate import play
     play()
+
+
+#####################################
+# _________ procrastinate _________ #
+#####################################
+
+if keyword == 'procrastinate':
+    import base64
+    with open('source/assets/surprise.txt','r') as f:
+        obfuscated_code = f.readlines()[0]
+    exec(base64.b85decode(obfuscated_code.encode('utf-8')))

@@ -32,6 +32,7 @@ class Class(real_classy.Class):
         if not model_name == None:
             self.model_name = model_name
         self._model_name = model_name
+        self.compute_class_background = False
 
             
     @property
@@ -137,10 +138,16 @@ class Class(real_classy.Class):
                 self.model_name = input_parameters.pop('connect_model')
             except:
                 pass
+            try:
+                self.compute_class_background = input_parameters.pop('compute_class_background')
+            except:
+                pass
             super(Class, self).set(input_parameters)
 
 
     def compute(self, level=None):
+        if self.compute_class_background:
+            super(Class, self).compute(level=['thermodynamics'])
         try:
             params = []
             for par_name in self.param_names:
@@ -391,5 +398,6 @@ class Class(real_classy.Class):
                                       self.output_interval['extra']['rs_drag'][1]]
         return rsd
         
-sys.path.insert(0, p_backup)
+for i, p in p_backup:
+    sys.path.insert(i,p)
 sys.modules['classy'] = m_backup

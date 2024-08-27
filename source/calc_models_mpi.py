@@ -3,12 +3,15 @@ import sys
 import time
 import itertools
 import pickle as pkl
+import signal
+import traceback
 
 sys.path.insert(0, '/home/gplynch/projects/connect_public')
 import datetime
 sys.path.insert(0, "/home/gplynch/projects/emu_wrapper")
 from TrainedEmulator import *
 
+os.environ['UCX_LOG_LEVEL'] = 'error'
 param_file   = sys.argv[1]
 CONNECT_PATH = sys.argv[2]
 sampling     = sys.argv[3]
@@ -21,8 +24,7 @@ from scipy.special import logit
 from mpi4py import MPI
 
 from source.default_module import Parameters
-from source.tools import get_computed_cls, get_z_idx
-
+from source.tools import get_computed_cls, get_z_idx, get_covmat
 
 param_file = os.path.join(CONNECT_PATH, param_file)
 param        = Parameters(param_file)
@@ -35,21 +37,43 @@ if sampling == 'iterative':
         directory = os.path.join(path, f'number_{iteration}')
     except:
         directory = os.path.join(path, f'N-{param.N}')
-elif sampling == 'lhc':
+elif sampling in ['lhc','hypersphere','pickle']:
     directory = os.path.join(path, f'N-{param.N}')
+elif sampling == "recompute":
+    directory = os.path.join(path, "number_0")
+    model_progress_file = os.path.join(directory, "model_progress.txt")
 
 comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 N_slaves = comm.Get_size()-1
-
 get_slave = itertools.cycle(range(1,N_slaves+1))
 
+def excepthook(etype, value, tb):
+    if tb is not None and value not in [None, '']:
+        print('Traceback (most recent call last):', file=sys.stderr)
+        traceback.print_tb(tb, file=sys.stderr)
+        print(f'{etype.__name__}: {value.args[0]}', file=sys.stderr)
+    comm.Abort(1)
+sys.excepthook = excepthook
 
+
+
+if len(param.output_Cl) > 0:
+    cosmo = classy.Class()
+    input_params = {'output':'tCl, lCl, pCl', 'lensing':'yes'}
+    if 'l_max_scalars' in param.extra_input:
+        input_params.update({'l_max_scalars':param.extra_input['l_max_scalars']})
+    cosmo.set(input_params)
+    cosmo.compute()
+    cls = get_computed_cls(cosmo)
+    global_ell = cls['ell']
+    
 
 ## rank == 0 (master)
 if rank == 0:
     if sampling == 'iterative':
-        exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        #exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        exec(f'from mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
         _locals = {}
         exec(f'mcmc = {param.mcmc_sampler}(param, CONNECT_PATH)', locals(), _locals)
         mcmc = _locals['mcmc']
@@ -58,20 +82,21 @@ if rank == 0:
 
         
     elif sampling == 'lhc':
-        with open(os.path.join(CONNECT_PATH, f'data/lhc_samples/{len(param.parameters.keys())}_{param.N}.sample'),'rb') as f:
-            sample = pkl.load(f)
-        data = sample.T
-        for i, name in enumerate(param_names):
-            if name in param.log_priors:
-                data[i] *= np.log10(param.parameters[name][1]) - np.log10(param.parameters[name][0])
-                data[i] += np.log10(param.parameters[name][0])
-                data[i] = np.power(10.,data[i])
-            else:
-                data[i] *= param.parameters[name][1] - param.parameters[name][0]
-                data[i] += param.parameters[name][0]
-        data = data.T
+        from source.ini_samplers import LatinHypercubeSampler
+        lhc = LatinHypercubeSampler(param)
+        data = lhc.run()
 
+    elif sampling == 'hypersphere':
+        from source.ini_samplers import HypersphereSampler
+        hs = HypersphereSampler(param)
+        data = hs.run()
 
+    elif sampling == 'pickle':
+        from source.ini_samplers import PickleSample
+        ps = PickleSampler(param)
+        data = ps.run()
+
+        
     sleep_short = 0.0001
     sleep_long = 0.1
     sleep_dict = {}
@@ -82,8 +107,13 @@ if rank == 0:
     while len(data) > data_idx:
         r = next(get_slave)
         if comm.iprobe(r):
-            useless_info = comm.recv(source=r)
-            comm.send(data[data_idx], dest=r)
+            last_model_id = int(comm.recv(source=r))
+            model = np.insert(data[data_idx], 0, data_idx)
+            comm.send(model, dest=r)
+            if sampling=="recompute":
+                if last_model_id!=-1:
+                    with open(model_progress_file, "a") as f:
+                        f.write(f"{remaining_idx[last_model_id]}\n")
             data_idx += 1
             sleep_dict[r] = 1
         else:
@@ -124,6 +154,7 @@ else:
     out_dirs_Cl      = []
     out_dirs_unlensed_Cl = []
     out_dirs_Pk      = []
+    out_dirs_z       = []
     out_dirs_bg      = []
     out_dirs_th      = []
     out_dirs_ex      = []
@@ -170,14 +201,21 @@ else:
     except:
         pass
 
+    # Initialise timeout signal
+    def timeout_handler(num, stack):
+        raise Exception('timeout')
+    signal.signal(signal.SIGALRM, timeout_handler)
+    
 
     # Iterate over each model
+    last_model_idx = -1
     while True:
-        comm.send('I am done', dest=0)
+        comm.send(last_model_idx, dest=0)
         model = comm.recv(source=0)
         if type(model).__name__ == 'str':
             break
-
+        last_model_idx = model[0]
+        model = model[1:]
         # Set required CLASS parameters
         params = {}
         if len(param.output_Cl) > 0:
@@ -258,6 +296,7 @@ else:
                 params['z_max_pk']          = max(param.z_bg_list)+.1
                 params['P_k_max_1/Mpc'] = 1.
 
+        signal.alarm(200) # CLASS computations must not take longer than 200 seconds
         try:
             cosmo = classy.Class()
             cosmo.set(params)
@@ -279,10 +318,10 @@ else:
             if len(param.output_derived) > 0:
                 der = cosmo.get_current_derived_parameters(param.output_derived)
             if len(param.output_Cl) > 0:
-                try:
-                    cls = cosmo.lensed_cl_computed() # Only available in CLASS++
-                except:
-                    cls = get_computed_cls(cosmo, param.ll_max_request)
+                cls = get_computed_cls(cosmo, ell_array=global_ell)
+                if any(np.isnan(cls[key]).any() for key in cls):
+                    raise classy.CosmoComputationError(
+                        'Class computation completed with NaN values in CMB power spectra.')
                 ell = cls['ell'][2:]
             if len(param.output_unlensed_Cl) > 0:
                 unlensed_cls = get_computed_cls(cosmo, param.ll_max_request, lensed=False)
@@ -306,7 +345,16 @@ else:
             print(params, flush=True)
             success = False
             print(e.message)
-
+        except Exception as e:
+            if str(e) == 'timeout':
+                print('The following model took too long to complete:', flush=True)
+                print(params, flush=True)
+                success = False
+            else:
+                raise e
+        finally:
+            signal.alarm(0)
+                
         if success:
             # Write data to data files
             for out_dir, output in zip(out_dirs_Cl, param.output_Cl):
@@ -351,6 +399,33 @@ else:
                                 f.write(str(p)+'\t')
                             else:
                                 f.write(str(p)+'\n')
+
+            for out_dir, output in zip(out_dirs_z, param.output_z):
+                zgrid = param.output_z_grids[output]
+                if output=="H":
+                    par_out = np.array([cosmo.Hubble(z) for z in zgrid])
+                if output=="DA":
+                    par_out = np.array([cosmo.angular_distance(z)*(1+z) for z in zgrid])
+                if output=="sigma8":
+                    h = cosmo.get_current_derived_parameters(["h"])["h"]
+                    par_out = np.array([cosmo.sigma(8./h, z) for z in zgrid])
+                if output=="x_e":
+                    xe_func = interp1d(th["z"], th["x_e"])
+                    par_out = xe_func(zgrid)
+                if output=="g":
+                    g_func = interp1d(th["z"], th["kappa' [Mpc^-1]"]*th["exp(-kappa)"])
+                    par_out = g_func(zgrid)
+                with open(out_dir, 'a') as f:
+                    for i, z in enumerate(zgrid):
+                        if i != len(zgrid)-1:
+                            f.write(str(z)+'\t')
+                        else:
+                            f.write(str(z)+'\n')
+                    for i, p in enumerate(par_out):
+                        if i != len(par_out)-1:
+                            f.write(str(p)+'\t')
+                        else:
+                            f.write(str(p)+'\n')
 
             if len(param.output_derived) > 0:
                 par_out = []
@@ -416,8 +491,13 @@ else:
                         f.write(str(m)+'\t')
                     else:
                         f.write(str(m)+'\n')
-
+        else:
+            nfailed[0]+=1
         cosmo.struct_cleanup()
 
+comm.Reduce(nfailed, total_failed, MPI.SUM, 0)
+if(rank==0):
+    print("{0}/{1} models succeeded".format(len(data)-total_failed[0], len(data)))
+comm.Barrier()
 MPI.Finalize()
 sys.exit(0)

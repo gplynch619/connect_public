@@ -226,13 +226,13 @@ class Training():
             out_mean = []
             out_var = []
             outputs = []
-
+            i=0
             for n in out_nodes:
                 data, mean, var = normalise_with_moments(n)
                 outputs.append(data)
                 out_mean.append(mean)
                 out_var.append(var)
-            
+                i+=1
             outputs = np.array(outputs).T
             std = tf.sqrt(tf.constant(out_var, dtype=tf.float32))
             mean = tf.constant(out_mean, dtype=tf.float32)
@@ -347,6 +347,9 @@ class Training():
         if len(self.param.output_Pk) > 0:
             self.output_info['k_grid']    = list(self.output_k_grid)
             self.output_info['output_Pk'] = self.param.output_Pk
+        if len(self.param.output_z) > 0:
+            self.output_info["output_z_grids"] = self.param.output_z_grids
+            self.output_info["output_z"] = self.param.output_z
         if len(self.param.output_bg) > 0:
             self.output_info['z_bg']      = list(self.output_z_bg)
             self.output_info['output_bg'] = self.param.output_bg
@@ -355,10 +358,6 @@ class Training():
             self.output_info['output_th'] = self.param.output_th
         if len(self.param.output_derived) > 0:
             self.output_info['output_derived'] = self.param.output_derived
-        if len(self.param.extra_output) > 0:
-            self.output_info['extra_output'] = self.param.extra_output
-        if len(self.param.extra_input) > 0:
-            self.output_info['extra_input'] = self.param.extra_input
 
 
         ### Convert data to tensors ###
@@ -373,7 +372,6 @@ class Training():
         output_tf = []
         del model_params_tf
         del output_tf
-
 
         ### Shuffle dataset and split in training, test and validation ###
         #dataset = dataset.shuffle(buffer_size = 10 * self.param.batchsize)
@@ -421,11 +419,6 @@ class Training():
 
 
     def train_model(self, epochs=None, output_file=None):
-        if self.param.output_activation:
-            out_act = self.output_info
-        else:
-            out_act = 0
-
         if epochs != None:
             self.param.epochs = int(epochs)
 
@@ -451,8 +444,7 @@ class Training():
                                      input_normaliser=self.input_normaliser,
                                      output_unnormaliser=self.unnormalise,
                                      activation=self.param.activation_function,
-                                     num_hidden_layers=self.param.N_hidden_layers,
-                                     output_info=out_act)
+                                     num_hidden_layers=self.param.N_hidden_layers)
             
             self.model.compile(optimizer=adam,
                                loss=self.loss_fun)

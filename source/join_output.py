@@ -12,12 +12,13 @@ class CreateSingleDataFile():
             try:
                 i = max([int(f.split('number_')[-1]) for f in os.listdir(path) if f.startswith('number')])
                 self.path  = os.path.join(path, f'number_{i}')
+                print("path {}".format(self.path))
             except:
                 self.path  = os.path.join(path, f'N-{self.param.N}')
-        if param.sampling == "recompute":
-            self.path = os.path.join(path, "number_0")
-        else:
-            self.path  = os.path.join(path, f'N-{self.param.N}')
+        # if param.sampling == "recompute":
+        #     self.path = os.path.join(path, "number_0")
+        # else:
+        #     self.path  = os.path.join(path, f'N-{self.param.N}')
     
         if len(self.param.output_Cl) > 0:
             self.ell_common = False
@@ -74,7 +75,6 @@ class CreateSingleDataFile():
                 i += 1
 
     def join(self):
-        
         for output in self.param.output_Cl:
             Cl_header = True
             with open(os.path.join(self.path, f'Cl_{output}.txt'),'w') as f:

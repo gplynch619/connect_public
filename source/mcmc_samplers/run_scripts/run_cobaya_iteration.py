@@ -90,8 +90,7 @@ for lkl in param.sampling_likelihoods:
             elif 'TT' in lkl and name.endswith('.clik'):
                 clik_file = os.path.join(lkls[lkl]['clik'], name)
                 break
-        info['likelihood'][lkls[lkl]['name']] = {'clik_file':   clik_file,
-                                                 'python_path': lkls[lkl]['path']}
+        info['likelihood'][lkls[lkl]['name']] = {'clik_file':   clik_file}
     else:
         raise NotImplementedError(f"For now, only the following three likelihoods are available during training:\n{' '*4}Planck_highl_TTTEEE_lit, Planck_lowl_TT, Planck_lowl_EE\nYou can manually add extra likelihoods as a nested dictionary using Cobaya syntax in the parameter file, e.g.\n{' '*4}"+"extra_cobaya_lkls = {'Likelihood_name': {'path': path/to/likelihood,\n"+f"{' '*52}'options': other_options,\n{' '*52}"+"...},\n"+f"{' '*44}"+"...}")
 

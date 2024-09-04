@@ -347,9 +347,6 @@ class Training():
         if len(self.param.output_Pk) > 0:
             self.output_info['k_grid']    = list(self.output_k_grid)
             self.output_info['output_Pk'] = self.param.output_Pk
-        if len(self.param.output_z) > 0:
-            self.output_info["output_z_grids"] = self.param.output_z_grids
-            self.output_info["output_z"] = self.param.output_z
         if len(self.param.output_bg) > 0:
             self.output_info['z_bg']      = list(self.output_z_bg)
             self.output_info['output_bg'] = self.param.output_bg

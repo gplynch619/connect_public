@@ -5,8 +5,7 @@ import itertools
 import pickle as pkl
 import signal
 import traceback
-
-sys.path.insert(0, '/home/gplynch/projects/connect_public')
+#sys.path.insert(0, '/home/gplynch/projects/connect_public')
 import datetime
 sys.path.insert(0, "/home/gplynch/projects/emu_wrapper")
 from TrainedEmulator import *
@@ -25,6 +24,7 @@ from mpi4py import MPI
 
 from source.default_module import Parameters
 from source.tools import get_computed_cls, get_z_idx, get_covmat
+#from source.ini_samplers import *
 
 param_file = os.path.join(CONNECT_PATH, param_file)
 param        = Parameters(param_file)
@@ -65,20 +65,28 @@ if len(param.output_Cl) > 0:
         input_params.update({'l_max_scalars':param.extra_input['l_max_scalars']})
     cosmo.set(input_params)
     cosmo.compute()
-    cls = get_computed_cls(cosmo)
+    cls = get_computed_cls(cosmo, ll_max_request=param.ll_max_request)
     global_ell = cls['ell']
     
 
 ## rank == 0 (master)
 if rank == 0:
     if sampling == 'iterative':
-        #exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
-        exec(f'from mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        print("IN ITERATIVE BRANCH")
+        try:
+            exec(f'from source.mcmc_samplers.{param.mcmc_sampler} import {param.mcmc_sampler}')
+        except Exception as e:
+            print(e)
+            raise
         _locals = {}
+        print(CONNECT_PATH)
         exec(f'mcmc = {param.mcmc_sampler}(param, CONNECT_PATH)', locals(), _locals)
         mcmc = _locals['mcmc']
+        print("ABOUT TO IMPORT")
 
         data = mcmc.import_points_from_chains(iteration)
+        print("END ITERATIVE BRANCH")
+
 
         
     elif sampling == 'lhc':
@@ -92,10 +100,11 @@ if rank == 0:
         data = hs.run()
 
     elif sampling == 'pickle':
-        from source.ini_samplers import PickleSample
+        from source.ini_samplers import PickleSampler
         ps = PickleSampler(param)
         data = ps.run()
 
+    print(data.shape)
         
     sleep_short = 0.0001
     sleep_long = 0.1
@@ -202,9 +211,9 @@ else:
         pass
 
     # Initialise timeout signal
-    def timeout_handler(num, stack):
-        raise Exception('timeout')
-    signal.signal(signal.SIGALRM, timeout_handler)
+    # def timeout_handler(num, stack):
+    #     raise Exception('timeout')
+    # signal.signal(signal.SIGALRM, timeout_handler)
     
 
     # Iterate over each model
@@ -216,6 +225,12 @@ else:
             break
         last_model_idx = model[0]
         model = model[1:]
+        #print("RANK {} received model {}".format(rank, model))
+        #s=""
+        #for p in model:
+        #    s+="{} ".format(p)
+        #with open("logs/rank_{}.log".format(rank), "a+") as f:
+        #    f.write("{}\n".format(s))
         # Set required CLASS parameters
         params = {}
         if len(param.output_Cl) > 0:
@@ -296,7 +311,7 @@ else:
                 params['z_max_pk']          = max(param.z_bg_list)+.1
                 params['P_k_max_1/Mpc'] = 1.
 
-        signal.alarm(200) # CLASS computations must not take longer than 200 seconds
+        # signal.alarm(200) # CLASS computations must not take longer than 200 seconds
         try:
             cosmo = classy.Class()
             cosmo.set(params)
@@ -324,7 +339,11 @@ else:
                         'Class computation completed with NaN values in CMB power spectra.')
                 ell = cls['ell'][2:]
             if len(param.output_unlensed_Cl) > 0:
-                unlensed_cls = get_computed_cls(cosmo, param.ll_max_request, lensed=False)
+                unlensed_cls = get_computed_cls(cosmo, ell_array=global_ell, lensed=False)
+                if any(np.isnan(cls[key]).any() for key in cls):
+                    raise classy.CosmoComputationError(
+                        'Class computation completed with NaN values in CMB power spectra.')
+                ell = cls['ell'][2:]
                 unlensed_ell = unlensed_cls['ell'][2:]
             if len(param.output_Pk) > 0:
                 pks = {}
@@ -337,23 +356,23 @@ else:
             success = True
         except classy.CosmoComputationError as e:
             print('The following model failed in CLASS:', flush=True)
-            print(params, flush=True)
+            print(model, flush=True)
             success = False
             print(e.message)
         except classy.CosmoSevereError as e:
             print('The following model failed in CLASS:', flush=True)
-            print(params, flush=True)
+            print(model, flush=True)
             success = False
             print(e.message)
-        except Exception as e:
-            if str(e) == 'timeout':
-                print('The following model took too long to complete:', flush=True)
-                print(params, flush=True)
-                success = False
-            else:
-                raise e
-        finally:
-            signal.alarm(0)
+        # except Exception as e:
+        #     if str(e) == 'timeout':
+        #         print('The following model took too long to complete:', flush=True)
+        #         print(params, flush=True)
+        #         success = False
+        #     else:
+        #         raise e
+        # finally:
+        #     signal.alarm(0)
                 
         if success:
             # Write data to data files
@@ -399,33 +418,6 @@ else:
                                 f.write(str(p)+'\t')
                             else:
                                 f.write(str(p)+'\n')
-
-            for out_dir, output in zip(out_dirs_z, param.output_z):
-                zgrid = param.output_z_grids[output]
-                if output=="H":
-                    par_out = np.array([cosmo.Hubble(z) for z in zgrid])
-                if output=="DA":
-                    par_out = np.array([cosmo.angular_distance(z)*(1+z) for z in zgrid])
-                if output=="sigma8":
-                    h = cosmo.get_current_derived_parameters(["h"])["h"]
-                    par_out = np.array([cosmo.sigma(8./h, z) for z in zgrid])
-                if output=="x_e":
-                    xe_func = interp1d(th["z"], th["x_e"])
-                    par_out = xe_func(zgrid)
-                if output=="g":
-                    g_func = interp1d(th["z"], th["kappa' [Mpc^-1]"]*th["exp(-kappa)"])
-                    par_out = g_func(zgrid)
-                with open(out_dir, 'a') as f:
-                    for i, z in enumerate(zgrid):
-                        if i != len(zgrid)-1:
-                            f.write(str(z)+'\t')
-                        else:
-                            f.write(str(z)+'\n')
-                    for i, p in enumerate(par_out):
-                        if i != len(par_out)-1:
-                            f.write(str(p)+'\t')
-                        else:
-                            f.write(str(p)+'\n')
 
             if len(param.output_derived) > 0:
                 par_out = []

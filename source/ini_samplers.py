@@ -106,6 +106,7 @@ class HypersphereSampler():
 class PickleSampler():
     def __init__(self, param):
         self.pickle_data_file = param.pickle_data_file
+        print(self.pickle_data_file)
 
     def run(self):
         with open(self.pickle_data_file, 'rb') as f:

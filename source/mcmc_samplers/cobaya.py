@@ -165,7 +165,7 @@ class cobaya(MCMC_base_class):
 
         path = f'data/{self.param.jobname}/number_{iteration}'
         paramnames = self.param.parameters.keys()
-
+        print("PATH {}".format(path))
         with open(os.path.join(path, 'cobaya_all_chains.pkl'),'rb') as f:
             all_chains = pkl.load(f)
         combined_chains = np.zeros(shape=(0,all_chains['chains'][0].shape[1]))

@@ -5,8 +5,8 @@ import numpy as np
 
 CONNECT_PATH  = os.path.split(os.path.realpath(os.path.dirname(__file__)))[0]
 
-def get_computed_cls(cosmo,,       # A computed CLASS model
-                     ell_array=[]
+def get_computed_cls(cosmo,       # A computed CLASS model
+                     ell_array=[],
                      ll_max_request = None,
                      lensed=True):
 
@@ -98,9 +98,6 @@ def create_output_folders(param,            # Parameter object
                 for output in param.output_Pk:
                     os.system(f"rm -rf {os.path.join(path, f'number_0/Pk_{output}_data')}")
                     os.mkdir(os.path.join(path, f'number_0/Pk_{output}_data'))
-                for output in param.output_z:
-                    os.system(f"rm -rf {os.path.join(path, f'number_0/{output}_z_data')}")
-                    os.mkdir(os.path.join(path,  f'number_0/{output}_z_data'))
                 for output in param.output_bg:
                     os.system(f"rm -rf {os.path.join(path, f'number_0/{output}_data')}")
                     os.mkdir(os.path.join(path, f'number_0/{output}_data'))
@@ -125,8 +122,6 @@ def create_output_folders(param,            # Parameter object
                     os.mkdir(os.path.join(path, f'N-{param.N}/Cl_unlensed_{output}_data'))
                 for output in param.output_Pk:
                     os.mkdir(os.path.join(path, f'N-{param.N}/Pk_{output}_data'))
-                for output in param.output_z:
-                    os.mkdir(os.path.join(path, f'N-{param.N}/{output}_z_data'))
                 for output in param.output_bg:
                     output = output.replace('/','\\')
                     os.mkdir(os.path.join(path, f'N-{param.N}/bg_{output}_data'))
@@ -156,9 +151,6 @@ def create_output_folders(param,            # Parameter object
             for output in param.output_Pk:
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/Pk_{output}_data')}")
                 os.mkdir(os.path.join(path, f'number_{iter_num}/Pk_{output}_data'))
-            for output in param.output_z:
-                os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/{output}_z_data')}")
-                os.mkdir(os.path.join(path,  f'number_{iter_num}/{output}_z_data'))
             for output in param.output_bg:
                 output = output.replace('/','\\')
                 os.system(f"rm -rf {os.path.join(path, f'number_{iter_num}/bg_{output}_data')}")

@@ -27,10 +27,6 @@ class Sampling():
         self.copy_param_file()
         self.call_calc_models(sampling='hypersphere')
 
-    def create_hypersphere_data(self):
-        self.copy_param_file()
-        self.call_calc_models(sampling='hypersphere')
-
     def create_lhc_data(self):
         self.copy_param_file()
         self.call_calc_models(sampling='lhc')
@@ -117,7 +113,7 @@ class Sampling():
             print(f'Initial model is {model}', flush=True)
 
         kill_iteration = False
-        do_initial_mcmc_run = True #False if the mcmc has already been done, and we are picking up after (due to an aborted run)
+        do_initial_mcmc_run = False #False if the mcmc has already been done, and we are picking up after (due to an aborted run)
         while True:
             if i > i_converged and annealing:
                 temperature = self.param.temperature[i-i_converged]
@@ -213,7 +209,11 @@ class Sampling():
     def call_calc_models(self, sampling='lhc'):
         os.environ["export OMP_NUM_THREADS"] = str({self.N_cpus_per_task})
         os.environ["PMIX_MCA_gds"] = "hash"
-        sp.check_call(f"mpirun -np {self.N_tasks - 1} python {self.CONNECT_PATH}/source/calc_models_mpi.py {self.param.param_file} {self.CONNECT_PATH} {sampling}".split())
+        try:
+            sp.check_call(f"mpirun -np {self.N_tasks - 1} python {self.CONNECT_PATH}/source/calc_models_mpi.py {self.param.param_file} {self.CONNECT_PATH} {sampling}".split(), stderr=sp.STDOUT)
+        except sp.CalledProcessError as e:
+            print(e.returncode)
+            print(e.output)
         os.environ["export OMP_NUM_THREADS"] = "1"
 
     def train_neural_network(self, sampling='lhc', output_file=None):
